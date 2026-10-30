@@ -208,16 +208,6 @@ class MainClinicApp(ctk.CTk):
         )
         self.btn_med.grid(row=2, column=0, padx=16, pady=6, sticky="ew")
 
-        # Theme Switcher
-        self.theme_menu = ctk.CTkOptionMenu(
-            self.sidebar,
-            values=["Light", "Dark"],
-            fg_color="#334155",
-            button_color="#475569",
-            height=32,
-            command=lambda mode: ctk.set_appearance_mode(mode)
-        )
-        self.theme_menu.grid(row=5, column=0, padx=16, pady=20, sticky="ew")
 
         # ---------------- 2. Pages Setup ----------------
         self.patient_frame = self.create_patient_page()
