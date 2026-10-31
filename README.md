@@ -10,6 +10,19 @@ python -m pip install -r requirements.txt
 
 The service listens on `http://127.0.0.1:5010` by default.
 
+### Desktop app
+
+Install the project dependencies, start the API as described above, then launch
+the Tkinter desktop app from the project root:
+
+```powershell
+python -m app.service
+```
+
+The app supports signup and login, then shows the `userId`, `userName`, and
+`userRole` returned by the API. Set `MEDIC_API_URL` if the API is hosted at a
+different URL; the default is `http://127.0.0.1:5010`.
+
 Create a `.env` file in the project root and set `MONGODB_URI` there:
 
 ```dotenv
