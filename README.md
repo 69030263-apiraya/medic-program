@@ -22,6 +22,9 @@ python -m app.service
 The app supports signup and login, then shows the `userId`, `userName`, and
 `userRole` returned by the API. Set `MEDIC_API_URL` if the API is hosted at a
 different URL; the default is `http://127.0.0.1:5010`.
+Users with the `admin` role are taken to the medicine administration screen,
+where they can add and delete medicines and medicine types using `/med` and
+`/med/type`.
 
 Create a `.env` file in the project root and set `MONGODB_URI` there:
 

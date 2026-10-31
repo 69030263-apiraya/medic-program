@@ -17,6 +17,16 @@ ERROR_MESSAGES = {
     "database_not_configured": "เซิร์ฟเวอร์ยังไม่ได้ตั้งค่าฐานข้อมูล",
     "database_unavailable": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้ในขณะนี้",
     "invalid_user_record": "ข้อมูลบัญชีผู้ใช้ไม่สมบูรณ์",
+    "medName_is_required": "กรุณากรอกชื่อยา",
+    "medTypeId_is_required": "กรุณาเลือกประเภทยา",
+    "unitName_is_required": "กรุณากรอกหน่วยนับ",
+    "invalid_BUD": "BUD ต้องเป็นจำนวนวันตั้งแต่ 0 ขึ้นไป",
+    "medicine_type_not_found": "ไม่พบประเภทยาที่เลือก",
+    "medTypeName_is_required": "กรุณากรอกชื่อประเภทยา",
+    "medicine_type_already_exists": "มีประเภทยานี้อยู่แล้ว",
+    "medId_is_required": "ไม่พบรหัสยา",
+    "medicine_not_found": "ไม่พบรายการยา",
+    "type_must_not_be_empty": "กรุณาเลือกประเภทยาที่ถูกต้อง",
 }
 
 
@@ -24,12 +34,17 @@ class APIRequestError(Exception):
     """An API request failed or returned an unsuccessful response."""
 
 
-def api_request(path, payload):
+def api_request(path, payload=None, method="POST"):
+    headers = {}
+    body = None
+    if payload is not None:
+        headers["Content-Type"] = "application/json"
+        body = json.dumps(payload).encode("utf-8")
     request = Request(
         f"{API_BASE_URL}{path}",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
+        data=body,
+        headers=headers,
+        method=method,
     )
 
     try:
@@ -62,6 +77,6 @@ def api_request(path, payload):
         data = json.loads(response_body)
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise APIRequestError("เซิร์ฟเวอร์ตอบกลับข้อมูลที่อ่านไม่ได้") from error
-    if not isinstance(data, dict):
+    if not isinstance(data, (dict, list)):
         raise APIRequestError("รูปแบบข้อมูลตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง")
     return data
