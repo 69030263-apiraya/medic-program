@@ -4,6 +4,7 @@ from .api_client import api_request
 from .app_admin import AdminView
 from .app_auth import AuthView
 from .app_me import ProfileView
+from .app_my_medicines import MyMedicinesView
 
 
 class AppService(ctk.CTk):
@@ -23,6 +24,12 @@ class AppService(ctk.CTk):
     def show_profile(self, user):
         self._show_view(ProfileView(self, user, api_request, self.show_auth))
 
+    def show_my_medicines(self, user):
+        self.geometry("900x700")
+        self._show_view(
+            MyMedicinesView(self, user, api_request, self.show_auth)
+        )
+
     def show_admin(self, user):
         self.geometry("900x700")
         self._show_view(AdminView(self, user, api_request, self.show_auth))
@@ -31,8 +38,7 @@ class AppService(ctk.CTk):
         if user.get("userRole") == "admin":
             self.show_admin(user)
         else:
-            self.geometry("460x560")
-            self.show_profile(user)
+            self.show_my_medicines(user)
 
     def _show_view(self, view):
         if self.current_view is not None:

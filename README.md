@@ -109,11 +109,12 @@ return `404`. The MongoDB `_id` is exposed in the API as `medId`.
 
 User medicine records are stored in `mymed.user_medicine`. `GET /user/med`
 requires `?user_id=<userId>` and returns an array of `medId`, `timesPerDay`,
-and `foodRequire`. `POST /user/med` accepts `userId`, `medId`, `timesPerDay`,
-and `foodRequire`; `timesPerDay` is an array of unique values from `1` to `4`
-(an empty array is allowed), and `foodRequire` must be `"before"`, `"after"`,
-or `null`. Duplicate user/medicine pairs return `409`. `DELETE /user/med`
-accepts `userId` and `medId` in the JSON body.
+`foodRequire`, and `value`. `POST /user/med` accepts `userId`, `medId`, `value`
+(positive dose quantity), `timesPerDay`, and `foodRequire`; `timesPerDay` is
+an array of unique values from `1` to `4` (morning, midday, evening, and
+bedtime), and `foodRequire` must be `"before"`, `"after"`, or `null`. Duplicate
+user/medicine pairs return `409`. `DELETE /user/med` accepts `userId` and
+`medId` in the JSON body.
 
 | Method | Path | Status |
 | --- | --- | --- |

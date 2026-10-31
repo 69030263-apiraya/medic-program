@@ -1,3 +1,5 @@
+import math
+
 from flask import Blueprint, current_app, jsonify, request
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
@@ -27,7 +29,7 @@ def list_user_medicines():
     try:
         documents = get_user_medicines_collection().find(
             {"userId": user_id.strip()},
-            {"_id": 0, "medId": 1, "timesPerDay": 1, "foodRequire": 1},
+            {"_id": 0, "medId": 1, "timesPerDay": 1, "foodRequire": 1, "value": 1},
         )
         return jsonify(
             [
@@ -35,6 +37,7 @@ def list_user_medicines():
                     "medId": document["medId"],
                     "timesPerDay": document["timesPerDay"],
                     "foodRequire": document["foodRequire"],
+                    "value": document.get("value"),
                 }
                 for document in documents
             ]
@@ -57,6 +60,7 @@ def add_user_medicine():
     med_id = payload.get("medId")
     times_per_day = payload.get("timesPerDay")
     food_require = payload.get("foodRequire")
+    value = payload.get("value")
 
     if not isinstance(user_id, str) or not user_id.strip():
         return jsonify({"error": "userId_is_required"}), 400
@@ -76,6 +80,18 @@ def add_user_medicine():
                 "message": "foodRequire must be 'before', 'after', or null.",
             }
         ), 400
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or value <= 0
+        or (isinstance(value, float) and not math.isfinite(value))
+    ):
+        return jsonify(
+            {
+                "error": "invalid_value",
+                "message": "value must be a positive number.",
+            }
+        ), 400
 
     user_id = user_id.strip()
     med_id = med_id.strip()
@@ -93,6 +109,7 @@ def add_user_medicine():
             "medId": med_id,
             "timesPerDay": times_per_day,
             "foodRequire": food_require,
+            "value": value,
         }
         user_meds.insert_one(user_medicine)
         return jsonify(
@@ -100,6 +117,7 @@ def add_user_medicine():
                 "medId": med_id,
                 "timesPerDay": times_per_day,
                 "foodRequire": food_require,
+                "value": value,
             }
         ), 201
     except DuplicateKeyError:

@@ -27,6 +27,14 @@ ERROR_MESSAGES = {
     "medId_is_required": "ไม่พบรหัสยา",
     "medicine_not_found": "ไม่พบรายการยา",
     "type_must_not_be_empty": "กรุณาเลือกประเภทยาที่ถูกต้อง",
+    "user_id_is_required": "ไม่พบรหัสผู้ใช้",
+    "userId_is_required": "ไม่พบรหัสผู้ใช้",
+    "medId_is_required": "กรุณาเลือกยา",
+    "invalid_timesPerDay": "กรุณาเลือกช่วงเวลาที่ต้องกินยา",
+    "invalid_foodRequire": "ข้อมูลก่อน/หลังอาหารไม่ถูกต้อง",
+    "invalid_value": "จำนวนยาต้องมากกว่า 0",
+    "user_medicine_already_exists": "ยานี้อยู่ในรายการของคุณแล้ว",
+    "user_medicine_not_found": "ไม่พบรายการยาของคุณ",
 }
 
 
