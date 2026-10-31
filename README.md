@@ -37,9 +37,10 @@ python -m api.service
 ```
 
 Each endpoint is implemented in its own module under `api/` (`health.py`,
-`auth_signup.py`, `auth_login.py`, `auth_logout.py`, and `medicine_type.py`). The central
-`api/service.py` registers these routes; shared MongoDB, password, and request
-helpers are in `database.py`, `passwords.py`, and `request_helpers.py`.
+`auth_signup.py`, `auth_login.py`, `auth_logout.py`, `medicine_type.py`, and
+`medicines.py`). The central `api/service.py` registers these routes; shared
+MongoDB, password, and request helpers are in `database.py`, `passwords.py`,
+and `request_helpers.py`.
 
 The login endpoint uses the `auth.users` collection:
 
@@ -90,6 +91,16 @@ Medicine types are stored in the `medicine.medicine_type` collection.
 `DELETE /med/type` accepts `{"medTypeId": "..."}` and deletes that type;
 unknown IDs return `404`.
 
+### Medicines
+
+Medicines are stored in the `medicine.medicines` collection. `POST /med`
+accepts `medName`, `medTypeId`, `unitName`, and `BUD` (a non-negative integer
+number of days), validates that the medicine type exists, and returns
+`medId`, `medName`, `medTypeId`, `unitName`, and `BUD` with HTTP `201`.
+`GET /med` returns an array with those fields; pass `?type=<medTypeId>` to
+filter by medicine type. `DELETE /med` accepts `{"medId": "..."}`; unknown IDs
+return `404`. The MongoDB `_id` is exposed in the API as `medId`.
+
 | Method | Path | Status |
 | --- | --- | --- |
 | `GET` | `/health` | Implemented |
@@ -99,3 +110,6 @@ unknown IDs return `404`.
 | `POST` | `/med/type` | Implemented |
 | `GET` | `/med/type` | Implemented |
 | `DELETE` | `/med/type` | Implemented |
+| `POST` | `/med` | Implemented |
+| `GET` | `/med` | Implemented |
+| `DELETE` | `/med` | Implemented |

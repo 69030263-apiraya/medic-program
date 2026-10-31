@@ -23,6 +23,10 @@ def get_medicine_types_collection() -> Collection:
     return get_medicine_database()["medicine_type"]
 
 
+def get_medicines_collection() -> Collection:
+    return get_medicine_database()["medicines"]
+
+
 def get_auth_database() -> Database:
     return get_database("auth")
 
