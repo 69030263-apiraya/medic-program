@@ -41,7 +41,7 @@ class MyMedicinesView(ctk.CTkFrame):
         header.pack_propagate(False)
         ctk.CTkLabel(
             header,
-            text="💊 ข้อมูลยาของฉัน",
+            text="ข้อมูลยาของฉัน",
             font=("Helvetica", 20, "bold"),
             text_color="#FFFFFF",
         ).pack(side="left", padx=24)
@@ -72,7 +72,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.loading_bar = ctk.CTkProgressBar(content, mode="indeterminate", height=4)
 
         self.add_frame = ctk.CTkFrame(content, fg_color="#FFFFFF", corner_radius=12)
-        self.add_frame.pack(fill="x", pady=(0, 12))
+        self.add_frame.pack(side="bottom", fill="x", pady=(12, 0))
         ctk.CTkLabel(
             self.add_frame,
             text="เพิ่มยาของฉัน",
@@ -392,7 +392,22 @@ class MyMedicinesView(ctk.CTkFrame):
             for medicine in self.catalog_medicines
             if isinstance(medicine.get("medId"), str)
         }
-        for time_id, period_name in TIME_PERIODS.items():
+        scheduled_by_time = {
+            time_id: [
+                user_medicine
+                for user_medicine in self.user_medicines
+                if time_id in user_medicine.get("timesPerDay", [])
+            ]
+            for time_id in TIME_PERIODS
+        }
+        ordered_periods = sorted(
+            TIME_PERIODS.items(),
+            key=lambda period: (
+                not scheduled_by_time[period[0]],
+                period[0],
+            ),
+        )
+        for time_id, period_name in ordered_periods:
             section = ctk.CTkFrame(
                 self.schedule_list, fg_color="#FFFFFF", corner_radius=12
             )
@@ -404,11 +419,7 @@ class MyMedicinesView(ctk.CTkFrame):
                 text_color="#0F766E",
             ).pack(anchor="w", padx=14, pady=(10, 4))
 
-            scheduled = [
-                user_medicine
-                for user_medicine in self.user_medicines
-                if time_id in user_medicine.get("timesPerDay", [])
-            ]
+            scheduled = scheduled_by_time[time_id]
             if not scheduled:
                 ctk.CTkLabel(
                     section, text="ไม่มีรายการยา", text_color="#94A3B8"
