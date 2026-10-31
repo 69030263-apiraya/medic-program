@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 # medic-program
 
 ## API service (Flask scaffold)
@@ -155,3 +157,4 @@ must be `"before"`, `"after"`, or `null`. Duplicate user/medicine pairs return
 | `GET` | `/user/med` | Implemented |
 | `POST` | `/user/med` | Implemented |
 | `DELETE` | `/user/med` | Implemented |
+>>>>>>> main
