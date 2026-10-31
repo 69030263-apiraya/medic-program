@@ -4,6 +4,7 @@ from flask import Blueprint, current_app, jsonify, request
 from pymongo.errors import PyMongoError
 
 from .database import get_medicine_types_collection, get_medicines_collection
+from .medicine_type import medicine_type_id_query
 from .request_helpers import get_json_payload
 
 medicines = Blueprint("medicines", __name__)
@@ -37,15 +38,7 @@ def create_medicine():
 
     try:
         types = get_medicine_types_collection()
-        med_type = types.find_one(
-            {
-                "$or": [
-                    {"_id": med_type_id},
-                    {"medTypeId": med_type_id},
-                ]
-            },
-            {"_id": 1},
-        )
+        med_type = types.find_one(medicine_type_id_query(med_type_id), {"_id": 1})
         if med_type is None:
             return jsonify({"error": "medicine_type_not_found"}), 404
 

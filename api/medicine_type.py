@@ -1,5 +1,6 @@
 import uuid
 
+from bson import ObjectId
 from flask import Blueprint, current_app, jsonify
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
@@ -7,6 +8,16 @@ from .database import get_medicine_types_collection
 from .request_helpers import get_json_payload
 
 medicine_type = Blueprint("medicine_type", __name__)
+
+
+def medicine_type_id_query(type_id):
+    alternatives = [{"_id": type_id}, {"medTypeId": type_id}]
+    if ObjectId.is_valid(type_id):
+        object_id = ObjectId(type_id)
+        alternatives.extend(
+            [{"_id": object_id}, {"medTypeId": object_id}]
+        )
+    return {"$or": alternatives}
 
 
 @medicine_type.post("/med/type")
@@ -85,12 +96,7 @@ def delete_medicine_type():
 
     try:
         result = get_medicine_types_collection().delete_one(
-            {
-                "$or": [
-                    {"_id": type_id.strip()},
-                    {"medTypeId": type_id.strip()},
-                ]
-            }
+            medicine_type_id_query(type_id.strip())
         )
         if result.deleted_count == 0:
             return jsonify({"error": "medicine_type_not_found"}), 404
