@@ -27,6 +27,10 @@ def get_medicines_collection() -> Collection:
     return get_medicine_database()["medicines"]
 
 
+def get_user_medicines_collection() -> Collection:
+    return get_database("mymed")["user_medicine"]
+
+
 def get_auth_database() -> Database:
     return get_database("auth")
 

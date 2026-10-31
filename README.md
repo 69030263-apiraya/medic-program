@@ -41,9 +41,9 @@ python -m api.service
 
 Each endpoint is implemented in its own module under `api/` (`health.py`,
 `auth_signup.py`, `auth_login.py`, `auth_logout.py`, `medicine_type.py`, and
-`medicines.py`). The central `api/service.py` registers these routes; shared
-MongoDB, password, and request helpers are in `database.py`, `passwords.py`,
-and `request_helpers.py`.
+`medicines.py`, and `user_medicines.py`). The central `api/service.py`
+registers these routes; shared MongoDB, password, and request helpers are in
+`database.py`, `passwords.py`, and `request_helpers.py`.
 
 The login endpoint uses the `auth.users` collection:
 
@@ -105,6 +105,16 @@ and returns `medId`, `medName`, `medTypeId`, `unitName`, and `BUD` with HTTP
 filter by medicine type. `DELETE /med` accepts `{"medId": "..."}`; unknown IDs
 return `404`. The MongoDB `_id` is exposed in the API as `medId`.
 
+### User medicines
+
+User medicine records are stored in `mymed.user_medicine`. `GET /user/med`
+requires `?user_id=<userId>` and returns an array of `medId`, `timesPerDay`,
+and `foodRequire`. `POST /user/med` accepts `userId`, `medId`, `timesPerDay`,
+and `foodRequire`; `timesPerDay` is an array of unique values from `1` to `4`
+(an empty array is allowed), and `foodRequire` must be `"before"`, `"after"`,
+or `null`. Duplicate user/medicine pairs return `409`. `DELETE /user/med`
+accepts `userId` and `medId` in the JSON body.
+
 | Method | Path | Status |
 | --- | --- | --- |
 | `GET` | `/health` | Implemented |
@@ -117,3 +127,6 @@ return `404`. The MongoDB `_id` is exposed in the API as `medId`.
 | `POST` | `/med` | Implemented |
 | `GET` | `/med` | Implemented |
 | `DELETE` | `/med` | Implemented |
+| `GET` | `/user/med` | Implemented |
+| `POST` | `/user/med` | Implemented |
+| `DELETE` | `/user/med` | Implemented |
