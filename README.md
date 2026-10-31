@@ -1,1 +1,76 @@
 # medic-program
+
+## API service (Flask scaffold)
+
+Install the API dependency from the project root:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+The service listens on `http://127.0.0.1:5010` by default.
+
+Create a `.env` file in the project root and set `MONGODB_URI` there:
+
+```dotenv
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/
+```
+
+The service loads this file automatically. Environment variables already set
+outside the file take precedence. Start the API with:
+
+```powershell
+python -m api.service
+```
+
+Each endpoint is implemented in its own module under `api/` (`health.py`,
+`auth_signup.py`, `auth_login.py`, and `auth_logout.py`). The central
+`api/service.py` registers these routes; shared MongoDB, password, and request
+helpers are in `database.py`, `passwords.py`, and `request_helpers.py`.
+
+The login endpoint uses the `auth.users` collection:
+
+```http
+POST /auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "userName": "your-user-name",
+  "userPassword": "your-password"
+}
+```
+
+On success it returns `userId`, `userName`, and `userRole`. Invalid credentials
+return `401`; missing MongoDB configuration or an unavailable database returns
+`503`. Existing plain-text passwords are upgraded to Werkzeug password hashes
+after a successful login.
+
+### Signup
+
+`POST /auth/signup` accepts `userName` (3-30 letters, numbers, or underscores)
+and `userPassword` (at least 4 characters). Usernames are unique, passwords
+are stored as Werkzeug hashes, and new accounts always receive the `user` role.
+Successful signup returns HTTP `200` with `message`, `userId`, `userName`, and
+`userRole`.
+
+### Logout
+
+`POST /auth/logout` accepts a `userId` and returns a successful acknowledgement.
+This endpoint is stateless: it does not revoke a login session or token, because
+the current API does not issue sessions or tokens. The client must clear its
+local login state.
+
+All `/auth` endpoint attempts are recorded in the `auth.user_logs` collection
+with `userId`, `action`, `result`, and a Unix-seconds `timestamp`. Passwords and
+other credentials are never included in audit records. If MongoDB cannot store
+an audit record, the endpoint responds with `503` rather than reporting the
+action as successful.
+
+| Method | Path | Status |
+| --- | --- | --- |
+| `GET` | `/health` | Implemented |
+| `POST` | `/auth/signup` | Implemented |
+| `POST` | `/auth/login` | Implemented |
+| `POST` | `/auth/logout` | Implemented (stateless acknowledgement) |
