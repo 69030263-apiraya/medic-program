@@ -97,9 +97,10 @@ unknown IDs return `404`.
 ### Medicines
 
 Medicines are stored in the `medicine.medicines` collection. `POST /med`
-accepts `medName`, `medTypeId`, `unitName`, and `BUD` (a non-negative integer
-number of days), validates that the medicine type exists, and returns
-`medId`, `medName`, `medTypeId`, `unitName`, and `BUD` with HTTP `201`.
+accepts `medName`, `medTypeId`, `unitName`, and `BUD` (either `null` or a
+non-negative integer number of days), validates that the medicine type exists,
+and returns `medId`, `medName`, `medTypeId`, `unitName`, and `BUD` with HTTP
+`201`.
 `GET /med` returns an array with those fields; pass `?type=<medTypeId>` to
 filter by medicine type. `DELETE /med` accepts `{"medId": "..."}`; unknown IDs
 return `404`. The MongoDB `_id` is exposed in the API as `medId`.

@@ -27,9 +27,14 @@ def create_medicine():
         return jsonify({"error": "medTypeId_is_required"}), 400
     if not isinstance(unit_name, str) or not unit_name.strip():
         return jsonify({"error": "unitName_is_required"}), 400
-    if not isinstance(bud, int) or isinstance(bud, bool) or bud < 0:
+    if bud is not None and (
+        not isinstance(bud, int) or isinstance(bud, bool) or bud < 0
+    ):
         return jsonify(
-            {"error": "invalid_BUD", "message": "BUD must be a non-negative integer number of days."}
+            {
+                "error": "invalid_BUD",
+                "message": "BUD must be null or a non-negative integer number of days.",
+            }
         ), 400
 
     med_name = med_name.strip()

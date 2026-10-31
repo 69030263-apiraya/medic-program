@@ -104,15 +104,17 @@ class AdminView(ctk.CTkFrame):
         unit_column.pack(side="left", expand=True, fill="x", padx=8)
         ctk.CTkLabel(unit_column, text="หน่วยนับ").pack(anchor="w", pady=(0, 4))
         self.unit_entry = ctk.CTkEntry(
-            unit_column, placeholder_text="เช่น เม็ด, ขวด", height=36
+            unit_column, placeholder_text="เช่น เม็ด, ช้อน, หยด", height=36
         )
         self.unit_entry.pack(fill="x")
 
         bud_column = ctk.CTkFrame(fields, fg_color="transparent")
         bud_column.pack(side="left", fill="x", padx=(8, 0))
-        ctk.CTkLabel(bud_column, text="BUD (วัน)").pack(anchor="w", pady=(0, 4))
+        ctk.CTkLabel(bud_column, text="BUD (วัน, ไม่บังคับ)").pack(
+            anchor="w", pady=(0, 4)
+        )
         self.bud_entry = ctk.CTkEntry(
-            bud_column, placeholder_text="0", width=100, height=36
+            bud_column, placeholder_text="เว้นว่างได้", width=100, height=36
         )
         self.bud_entry.pack(fill="x")
 
@@ -170,18 +172,24 @@ class AdminView(ctk.CTkFrame):
         unit_name = self.unit_entry.get().strip()
         bud_text = self.bud_entry.get().strip()
         med_type_id = self.type_names_by_id.get(self.type_option.get())
-        if not med_name or not unit_name or med_type_id is None or not bud_text:
-            self._show_status("กรุณากรอกชื่อยา ประเภท หน่วยนับ และ BUD", error=True)
+        if not med_name or not unit_name or med_type_id is None:
+            self._show_status("กรุณากรอกชื่อยา ประเภท และหน่วยนับ", error=True)
             return
-        if not bud_text.isdigit():
-            self._show_status("BUD ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป", error=True)
-            return
+        bud_value = None
+        if bud_text and bud_text.lower() != "null":
+            if not bud_text.isdigit():
+                self._show_status(
+                    "BUD ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป หรือเว้นว่าง/พิมพ์ null",
+                    error=True,
+                )
+                return
+            bud_value = int(bud_text)
 
         payload = {
             "medName": med_name,
             "medTypeId": med_type_id,
             "unitName": unit_name,
-            "BUD": int(bud_text),
+            "BUD": bud_value,
         }
         self._run_requests(
             [("/med", payload, "POST")],
@@ -404,7 +412,12 @@ class AdminView(ctk.CTkFrame):
             ).pack(anchor="w")
             ctk.CTkLabel(
                 details,
-                text=f"{type_name} · {medicine.get('unitName', '-')} · BUD {medicine.get('BUD', '-')} วัน",
+                text=(
+                    f"{type_name} · {medicine.get('unitName', '-')} · "
+                    f"BUD {medicine['BUD']} วัน"
+                    if medicine.get("BUD") is not None
+                    else f"{type_name} · {medicine.get('unitName', '-')} · ไม่ระบุ BUD"
+                ),
                 font=("Helvetica", 11),
                 text_color="#64748B",
                 anchor="w",
