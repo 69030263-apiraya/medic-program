@@ -19,7 +19,19 @@ def get_user_logs_collection() -> Collection:
     return get_auth_database()["user_logs"]
 
 
+def get_medicine_types_collection() -> Collection:
+    return get_medicine_database()["medicine_type"]
+
+
 def get_auth_database() -> Database:
+    return get_database("auth")
+
+
+def get_medicine_database() -> Database:
+    return get_database("medicine")
+
+
+def get_database(database_name: str) -> Database:
     global mongo_client
 
     mongo_uri = os.environ.get("MONGODB_URI")
@@ -29,4 +41,4 @@ def get_auth_database() -> Database:
     if mongo_client is None:
         mongo_client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
 
-    return mongo_client["auth"]
+    return mongo_client[database_name]

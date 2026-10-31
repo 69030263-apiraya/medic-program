@@ -37,7 +37,7 @@ python -m api.service
 ```
 
 Each endpoint is implemented in its own module under `api/` (`health.py`,
-`auth_signup.py`, `auth_login.py`, and `auth_logout.py`). The central
+`auth_signup.py`, `auth_login.py`, `auth_logout.py`, and `medicine_type.py`). The central
 `api/service.py` registers these routes; shared MongoDB, password, and request
 helpers are in `database.py`, `passwords.py`, and `request_helpers.py`.
 
@@ -81,9 +81,21 @@ other credentials are never included in audit records. If MongoDB cannot store
 an audit record, the endpoint responds with `503` rather than reporting the
 action as successful.
 
+### Medicine types
+
+Medicine types are stored in the `medicine.medicine_type` collection.
+`POST /med/type` accepts `{"medTypeName": "..."}` and returns the created
+`medTypeId` and `medTypeName` with HTTP `201`; duplicate names return `409`.
+`GET /med/type` returns an array of `{medTypeId, medTypeName}` objects.
+`DELETE /med/type` accepts `{"medTypeId": "..."}` and deletes that type;
+unknown IDs return `404`.
+
 | Method | Path | Status |
 | --- | --- | --- |
 | `GET` | `/health` | Implemented |
 | `POST` | `/auth/signup` | Implemented |
 | `POST` | `/auth/login` | Implemented |
 | `POST` | `/auth/logout` | Implemented (stateless acknowledgement) |
+| `POST` | `/med/type` | Implemented |
+| `GET` | `/med/type` | Implemented |
+| `DELETE` | `/med/type` | Implemented |
