@@ -6,12 +6,20 @@ from urllib.parse import urlencode
 import customtkinter as ctk
 
 from .api_client import APIRequestError
+from .notifications import MedicineReminder
 
 TIME_PERIODS = {
     1: "เช้า",
     2: "กลางวัน",
     3: "เย็น",
     4: "ก่อนนอน",
+}
+
+PERIOD_CLOCK = {
+    1: "08:00",
+    2: "12:00",
+    3: "16:00",
+    4: "20:00",
 }
 
 FOOD_OPTIONS = {
@@ -35,6 +43,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.busy_buttons = []
         self.is_busy = False
         self.error_after_id = None
+        self.reminder = MedicineReminder()
 
         header = ctk.CTkFrame(self, fg_color="#0F766E", corner_radius=0, height=72)
         header.pack(fill="x")
@@ -75,7 +84,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.add_frame.pack(side="bottom", fill="x", pady=(12, 0))
         ctk.CTkLabel(
             self.add_frame,
-            text="เพิ่มยาของฉัน",
+            text="3. เพิ่มยาของฉัน",
             font=("Helvetica", 15, "bold"),
             text_color="#0F172A",
         ).pack(anchor="w", padx=14, pady=(10, 4))
@@ -127,7 +136,10 @@ class MyMedicinesView(ctk.CTkFrame):
 
         periods = ctk.CTkFrame(self.add_frame, fg_color="transparent")
         periods.pack(fill="x", padx=14, pady=(0, 10))
-        ctk.CTkLabel(periods, text="ช่วงเวลาที่ต้องกิน").pack(side="left", padx=(0, 8))
+        ctk.CTkLabel(
+            periods,
+            text="ช่วงเวลาที่ต้องกิน (ไม่เลือก = เมื่อมีอาการ)",
+        ).pack(side="left", padx=(0, 8))
         self.time_vars = {}
         for time_id, label in TIME_PERIODS.items():
             variable = ctk.BooleanVar(value=False)
@@ -149,11 +161,59 @@ class MyMedicinesView(ctk.CTkFrame):
         self.add_button.pack(anchor="e", padx=14, pady=(0, 12))
         self.busy_buttons.append(self.add_button)
 
+        ctk.CTkLabel(
+            content,
+            text="1. สรุปยาแต่ละช่วงเวลา",
+            font=("Helvetica", 16, "bold"),
+            text_color="#0F172A",
+        ).pack(anchor="w", pady=(0, 6))
+        self.period_summary = ctk.CTkFrame(
+            content, fg_color="#FFFFFF", corner_radius=12
+        )
+        self.period_summary.pack(fill="x", pady=(0, 12))
+        self.period_summary_labels = {}
+        for period_id, period_name in TIME_PERIODS.items():
+            row = ctk.CTkFrame(self.period_summary, fg_color="transparent")
+            row.pack(fill="x", padx=12, pady=5)
+            ctk.CTkLabel(
+                row,
+                text=f"{PERIOD_CLOCK[period_id]}  {period_name}",
+                width=150,
+                anchor="w",
+                font=("Helvetica", 12, "bold"),
+                text_color="#0F766E",
+            ).pack(side="left", padx=(4, 8))
+            summary_label = ctk.CTkLabel(
+                row,
+                text="ไม่มีรายการยา",
+                anchor="w",
+                text_color="#94A3B8",
+            )
+            summary_label.pack(side="left", fill="x", expand=True)
+            self.period_summary_labels[period_id] = summary_label
+        as_needed_row = ctk.CTkFrame(self.period_summary, fg_color="transparent")
+        as_needed_row.pack(fill="x", padx=12, pady=5)
+        ctk.CTkLabel(
+            as_needed_row,
+            text="เมื่อมีอาการ",
+            width=150,
+            anchor="w",
+            font=("Helvetica", 12, "bold"),
+            text_color="#0F766E",
+        ).pack(side="left", padx=(4, 8))
+        self.as_needed_summary_label = ctk.CTkLabel(
+            as_needed_row,
+            text="ไม่มีรายการยา",
+            anchor="w",
+            text_color="#94A3B8",
+        )
+        self.as_needed_summary_label.pack(side="left", fill="x", expand=True)
+
         schedule_header = ctk.CTkFrame(content, fg_color="transparent")
         schedule_header.pack(fill="x", pady=(0, 6))
         ctk.CTkLabel(
             schedule_header,
-            text="ตารางยาที่ต้องกินวันนี้",
+            text="2. รายการยาทั้งหมดวันนี้",
             font=("Helvetica", 16, "bold"),
             text_color="#0F172A",
         ).pack(side="left")
@@ -165,6 +225,13 @@ class MyMedicinesView(ctk.CTkFrame):
         )
         self.refresh_button.pack(side="right")
         self.busy_buttons.append(self.refresh_button)
+        self.test_notification_button = ctk.CTkButton(
+            schedule_header,
+            text="ทดสอบการแจ้งเตือน",
+            width=160,
+            command=self.test_notification,
+        )
+        self.test_notification_button.pack(side="right", padx=(0, 8))
 
         self.schedule_list = ctk.CTkScrollableFrame(
             content, fg_color="transparent"
@@ -246,10 +313,6 @@ class MyMedicinesView(ctk.CTkFrame):
         if not math.isfinite(value) or value <= 0:
             self._show_status("จำนวนยาต้องมากกว่า 0", error=True)
             return
-        if not times_per_day:
-            self._show_status("กรุณาเลือกช่วงเวลาที่ต้องกินยา", error=True)
-            return
-
         if value.is_integer():
             value = int(value)
         payload = {
@@ -295,6 +358,14 @@ class MyMedicinesView(ctk.CTkFrame):
     def _medicine_deleted(self, _responses):
         self._show_status("นำยาออกจากรายการแล้ว")
         self.refresh()
+
+    def test_notification(self):
+        try:
+            self.reminder.test_notification()
+        except ValueError as error:
+            self._show_status(str(error), error=True)
+        except OSError as error:
+            self._show_status(f"แสดงการแจ้งเตือนไม่สำเร็จ: {error}", error=True)
 
     def _run_requests(self, requests, on_success, loading_message):
         if self.is_busy:
@@ -370,6 +441,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.medicine_types = types
         self.catalog_medicines = medicines
         self.user_medicines = user_medicines
+        self.reminder.update(user_medicines, medicines)
         self.type_ids_by_name = {
             item["medTypeName"]: item["medTypeId"]
             for item in types
@@ -384,9 +456,6 @@ class MyMedicinesView(ctk.CTkFrame):
         self._show_status("ข้อมูลยาของวันนี้")
 
     def _render_schedule(self):
-        for child in self.schedule_list.winfo_children():
-            child.destroy()
-
         medicines_by_id = {
             medicine.get("medId"): medicine
             for medicine in self.catalog_medicines
@@ -400,35 +469,56 @@ class MyMedicinesView(ctk.CTkFrame):
             ]
             for time_id in TIME_PERIODS
         }
-        ordered_periods = sorted(
-            TIME_PERIODS.items(),
-            key=lambda period: (
-                not scheduled_by_time[period[0]],
-                period[0],
-            ),
-        )
-        for time_id, period_name in ordered_periods:
-            section = ctk.CTkFrame(
-                self.schedule_list, fg_color="#FFFFFF", corner_radius=12
-            )
-            section.pack(fill="x", pady=5)
-            ctk.CTkLabel(
-                section,
-                text=period_name,
-                font=("Helvetica", 14, "bold"),
-                text_color="#0F766E",
-            ).pack(anchor="w", padx=14, pady=(10, 4))
-
-            scheduled = scheduled_by_time[time_id]
-            if not scheduled:
-                ctk.CTkLabel(
-                    section, text="ไม่มีรายการยา", text_color="#94A3B8"
-                ).pack(anchor="w", padx=14, pady=(0, 10))
-                continue
-
-            for user_medicine in scheduled:
+        for period_id, user_medicines in scheduled_by_time.items():
+            entries = []
+            for user_medicine in user_medicines:
                 medicine = medicines_by_id.get(user_medicine.get("medId"), {})
-                self._render_scheduled_medicine(section, medicine, user_medicine)
+                medicine_name = medicine.get("medName", "ไม่พบข้อมูลยา")
+                amount = user_medicine.get("value")
+                unit = medicine.get("unitName", "หน่วย")
+                if isinstance(amount, (int, float)):
+                    entries.append(f"{medicine_name} {amount:g} {unit}")
+                else:
+                    entries.append(f"{medicine_name} ({unit})")
+            self.period_summary_labels[period_id].configure(
+                text=", ".join(entries) if entries else "ไม่มีรายการยา",
+                text_color="#0F172A" if entries else "#94A3B8",
+            )
+        as_needed = [
+            user_medicine
+            for user_medicine in self.user_medicines
+            if not user_medicine.get("timesPerDay")
+        ]
+        as_needed_entries = []
+        for user_medicine in as_needed:
+            medicine = medicines_by_id.get(user_medicine.get("medId"), {})
+            medicine_name = medicine.get("medName", "ไม่พบข้อมูลยา")
+            amount = user_medicine.get("value")
+            unit = medicine.get("unitName", "หน่วย")
+            if isinstance(amount, (int, float)):
+                as_needed_entries.append(f"{medicine_name} {amount:g} {unit}")
+            else:
+                as_needed_entries.append(f"{medicine_name} ({unit})")
+        self.as_needed_summary_label.configure(
+            text=", ".join(as_needed_entries) if as_needed_entries else "ไม่มีรายการยา",
+            text_color="#0F172A" if as_needed_entries else "#94A3B8",
+        )
+
+        for child in self.schedule_list.winfo_children():
+            child.destroy()
+        if not self.user_medicines:
+            ctk.CTkLabel(
+                self.schedule_list,
+                text="ยังไม่มีรายการยาในวันนี้",
+                text_color="#64748B",
+            ).pack(pady=18)
+            return
+
+        for user_medicine in self.user_medicines:
+            medicine = medicines_by_id.get(user_medicine.get("medId"), {})
+            self._render_scheduled_medicine(
+                self.schedule_list, medicine, user_medicine
+            )
 
     def _render_scheduled_medicine(self, parent, medicine, user_medicine):
         row = ctk.CTkFrame(parent, fg_color="#F8FAFC", corner_radius=8)
@@ -444,9 +534,19 @@ class MyMedicinesView(ctk.CTkFrame):
             "before": "ก่อนอาหาร",
             "after": "หลังอาหาร",
         }.get(food_require)
-        description = amount_text
+        period_names = [
+            f"{period_name} ({PERIOD_CLOCK[period_id]})"
+            for period_id, period_name in TIME_PERIODS.items()
+            if period_id in user_medicine.get("timesPerDay", [])
+        ]
+        if not period_names:
+            period_names.append("เมื่อมีอาการ")
+        description_parts = [amount_text]
         if food_text:
-            description = f"{description} · {food_text}" if description else food_text
+            description_parts.append(food_text)
+        if period_names:
+            description_parts.append(f"เวลา {', '.join(period_names)}")
+        description = " · ".join(part for part in description_parts if part)
         ctk.CTkLabel(
             details,
             text=medicine_name,
@@ -487,3 +587,7 @@ class MyMedicinesView(ctk.CTkFrame):
             lambda _responses: self.on_logout(),
             "กำลังออกจากระบบ...",
         )
+
+    def destroy(self):
+        self.reminder.stop()
+        super().destroy()

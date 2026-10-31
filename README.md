@@ -25,6 +25,11 @@ different URL; the default is `http://127.0.0.1:5010`.
 Users with the `admin` role are taken to the medicine administration screen,
 where they can add and delete medicines and medicine types using `/med` and
 `/med/type`.
+On Windows, the user medicine screen sends audible native notifications at
+08:00, 12:00, 16:00, and 20:00 for selected medicine periods while the app is
+running. The page shows a fixed four-period dose summary, the full daily
+medicine list with removal controls, and the add-medicine form. Use
+**ทดสอบการแจ้งเตือน** to check the configured times and next reminder.
 
 Create a `.env` file in the project root and set `MONGODB_URI` there:
 
@@ -112,9 +117,9 @@ requires `?user_id=<userId>` and returns an array of `medId`, `timesPerDay`,
 `foodRequire`, and `value`. `POST /user/med` accepts `userId`, `medId`, `value`
 (positive dose quantity), `timesPerDay`, and `foodRequire`; `timesPerDay` is
 an array of unique values from `1` to `4` (morning, midday, evening, and
-bedtime), and `foodRequire` must be `"before"`, `"after"`, or `null`. Duplicate
-user/medicine pairs return `409`. `DELETE /user/med` accepts `userId` and
-`medId` in the JSON body.
+bedtime); an empty array means take as needed when symptoms occur. `foodRequire`
+must be `"before"`, `"after"`, or `null`. Duplicate user/medicine pairs return
+`409`. `DELETE /user/med` accepts `userId` and `medId` in the JSON body.
 
 | Method | Path | Status |
 | --- | --- | --- |
