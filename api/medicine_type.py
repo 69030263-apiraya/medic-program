@@ -26,12 +26,19 @@ def create_medicine_type():
         if types.find_one({"medTypeName": type_name}, {"_id": 1}) is not None:
             return jsonify({"error": "medicine_type_already_exists"}), 409
 
-        medicine_type_data = {
-            "medTypeId": str(uuid.uuid4()),
-            "medTypeName": type_name,
-        }
-        types.insert_one(medicine_type_data)
-        return jsonify(medicine_type_data), 201
+        medicine_type_id = str(uuid.uuid4())
+        types.insert_one(
+            {
+                "_id": medicine_type_id,
+                "medTypeName": type_name,
+            }
+        )
+        return jsonify(
+            {
+                "medTypeId": medicine_type_id,
+                "medTypeName": type_name,
+            }
+        ), 201
     except DuplicateKeyError:
         return jsonify({"error": "medicine_type_already_exists"}), 409
     except RuntimeError:
@@ -46,11 +53,13 @@ def create_medicine_type():
 def list_medicine_types():
     try:
         types = get_medicine_types_collection()
-        documents = types.find({}, {"_id": 0, "medTypeId": 1, "medTypeName": 1})
+        documents = types.find(
+            {}, {"_id": 1, "medTypeId": 1, "medTypeName": 1}
+        )
         return jsonify(
             [
                 {
-                    "medTypeId": document["medTypeId"],
+                    "medTypeId": str(document.get("medTypeId") or document["_id"]),
                     "medTypeName": document["medTypeName"],
                 }
                 for document in documents
@@ -76,7 +85,12 @@ def delete_medicine_type():
 
     try:
         result = get_medicine_types_collection().delete_one(
-            {"medTypeId": type_id.strip()}
+            {
+                "$or": [
+                    {"_id": type_id.strip()},
+                    {"medTypeId": type_id.strip()},
+                ]
+            }
         )
         if result.deleted_count == 0:
             return jsonify({"error": "medicine_type_not_found"}), 404
