@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -6,7 +7,19 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+if getattr(sys, "frozen", False):
+    application_dir = Path(sys.executable).resolve().parent
+    config_dirs = (application_dir, application_dir.parent)
+else:
+    application_dir = Path(__file__).resolve().parents[1]
+    config_dirs = (application_dir,)
+
+for config_dir in config_dirs:
+    env_file = config_dir / ".env"
+    if env_file.is_file():
+        load_dotenv(env_file)
+        if os.environ.get("MONGODB_URI"):
+            break
 
 mongo_client: MongoClient | None = None
 

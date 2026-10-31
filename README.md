@@ -44,6 +44,25 @@ outside the file take precedence. Start the API with:
 python -m api.service
 ```
 
+### Build a single Windows executable
+
+On Windows, run this from PowerShell in the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
+```
+
+The script installs the dependencies and builds `dist\MedicProgram.exe`.
+This single executable starts the API locally and opens the desktop app; closing
+the app also stops its API. Put a `.env` file either next to the executable or
+in the project folder above `dist`, and set `MONGODB_URI` before launching:
+
+```dotenv
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>/
+```
+
+The executable listens only on `127.0.0.1:5010`. Make sure that port is free.
+
 Each endpoint is implemented in its own module under `api/` (`health.py`,
 `auth_signup.py`, `auth_login.py`, `auth_logout.py`, `medicine_type.py`, and
 `medicines.py`, and `user_medicines.py`). The central `api/service.py`
