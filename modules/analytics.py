@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('TkAgg')  # บังคับใช้ backend TkAgg สำหรับ GUI บน Windows
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from matplotlib.figure import Figure
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_manager import db
@@ -123,14 +124,16 @@ class AnalyticsModule:
         filtered.sort(key=lambda x: x['date'])
         return filtered
 
-    def show_medication_timeline(self, start_date=None, end_date=None, med_name=None):
-        """สร้างและวาดกราฟ Timeline ประวัติการกินยา"""
-        records = self.get_filtered_history(start_date, end_date, med_name)
-
+    def create_medication_timeline_figure(self, records):
+        """สร้าง Figure สำหรับแสดงกราฟ Timeline ประวัติการกินยา"""
         if not records:
-            print("\n❌ ไม่พบข้อมูลประวัติการกินยาตามเงื่อนไขที่เลือก")
-            return
+            return None
 
+        fig = Figure(figsize=(9.5, 4.8))
+        self._draw_medication_timeline(fig, records)
+        return fig
+
+    def _draw_medication_timeline(self, fig, records):
         dates = [item['date'] for item in records]
         meds = [item['med_name'] for item in records]
         statuses = [item['status'] for item in records]
@@ -138,7 +141,7 @@ class AnalyticsModule:
         # สีแสดงสถานะ: เขียว = ตรงเวลา / แดง = ข้าม/ลืม
         colors = ['#2ecc71' if s == 'on-time' else '#e74c3c' for s in statuses]
 
-        fig, ax = plt.subplots(figsize=(9.5, 4.8))
+        ax = fig.subplots()
         ax.plot(dates, meds, color='#bdc3c7', linestyle='--', linewidth=1.5, zorder=1)
         ax.scatter(dates, meds, c=colors, s=140, zorder=2, edgecolors='white', linewidth=1.5)
 
@@ -149,8 +152,18 @@ class AnalyticsModule:
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
         ax.grid(True, linestyle=':', alpha=0.6, axis='x')
         fig.autofmt_xdate()
+        fig.tight_layout()
 
-        plt.tight_layout()
+    def show_medication_timeline(self, start_date=None, end_date=None, med_name=None):
+        """แสดงกราฟ Timeline ประวัติการกินยาในหน้าต่าง Matplotlib"""
+        records = self.get_filtered_history(start_date, end_date, med_name)
+
+        if not records:
+            print("\n❌ ไม่พบข้อมูลประวัติการกินยาตามเงื่อนไขที่เลือก")
+            return
+
+        fig = plt.figure(figsize=(9.5, 4.8))
+        self._draw_medication_timeline(fig, records)
 
         # ดึงหน้าต่างกราฟขึ้นมาอยู่หน้าสุด
         try:

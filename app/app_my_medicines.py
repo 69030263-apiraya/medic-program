@@ -5,6 +5,10 @@ from urllib.parse import urlencode
 
 import customtkinter as ctk
 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from modules.analytics import AnalyticsModule
+
 from .api_client import APIRequestError
 from .notifications import MedicineReminder
 
@@ -44,6 +48,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.is_busy = False
         self.error_after_id = None
         self.reminder = MedicineReminder()
+        self.analytics = AnalyticsModule()
 
         header = ctk.CTkFrame(self, fg_color="#0F766E", corner_radius=0, height=72)
         header.pack(fill="x")
@@ -70,6 +75,16 @@ class MyMedicinesView(ctk.CTkFrame):
         )
         self.logout_button.pack(side="right", padx=20)
         self.busy_buttons.append(self.logout_button)
+        self.history_button = ctk.CTkButton(
+            header,
+            text="ประวัติ",
+            width=120,
+            fg_color="#FFFFFF",
+            text_color="#0F766E",
+            hover_color="#CCFBF1",
+            command=self.show_medication_history,
+        )
+        self.history_button.pack(side="right", padx=(0, 12))
 
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=20, pady=14)
@@ -587,6 +602,22 @@ class MyMedicinesView(ctk.CTkFrame):
             lambda _responses: self.on_logout(),
             "กำลังออกจากระบบ...",
         )
+
+    def show_medication_history(self):
+        records = self.analytics.get_filtered_history()
+        figure = self.analytics.create_medication_timeline_figure(records)
+        if figure is None:
+            messagebox.showinfo("ประวัติการกินยา", "ไม่พบข้อมูลประวัติการกินยา")
+            return
+
+        window = ctk.CTkToplevel(self)
+        window.title("ประวัติการกินยา")
+        window.geometry("980x560")
+        window.transient(self)
+
+        canvas = FigureCanvasTkAgg(figure, master=window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=12, pady=12)
 
     def destroy(self):
         self.reminder.stop()
