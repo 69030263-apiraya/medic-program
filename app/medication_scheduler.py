@@ -140,7 +140,7 @@ class MedicationSchedulerApp:
 
         messagebox.showinfo("สำเร็จ", f"ตั้งเวลาเตือน {med_name} ตอน {remind_time} น. เรียบร้อยแล้ว")
 
-    def check_schedule_loop(self):
+    def check_time_loop(self):
         """Background Thread เช็คเวลาปัจจุบันเทียบกับตารางทุกๆ 1 วินาที"""
         while self.is_running:
             now = datetime.datetime.now()
@@ -232,21 +232,6 @@ class MedicationSchedulerApp:
         ttk.Button(btn_frame, text="กินยาแล้ว", command=on_take).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="ข้าม", command=on_skip).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="เลื่อน 10 นาที", command=on_snooze).pack(side="left", padx=5)
-    def check_time_loop(self):
-        """ฟังก์ชันทำงานเบื้องหลังเพื่อคอยเช็คเวลาแจ้งเตือนทุกๆ 1 วินาที"""
-        import time
-        from datetime import datetime
-        
-        while self.is_running:
-            now = datetime.now().strftime("%H:%M")
-            # เช็ครายการเตือนที่ตั้งไว้
-            for schedule in self.schedules:
-                if schedule["time"] == now and now not in self.triggered_times:
-                    self.triggered_times.add(now)
-                    # แสดงป๊อบอัปแจ้งเตือนกินยา
-                    self.show_notification_popup(schedule["med"], schedule["time"])
-            time.sleep(1)
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = MedicationSchedulerApp(root)
