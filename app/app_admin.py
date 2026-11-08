@@ -4,11 +4,12 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 from .api_client import APIRequestError
+from .theme import COLORS
 
 
 class AdminView(ctk.CTkFrame):
     def __init__(self, master, user, api_request, on_logout):
-        super().__init__(master, fg_color="#F1F5F9")
+        super().__init__(master, fg_color=COLORS["background"])
         self.user = user
         self.api_request = api_request
         self.on_logout = on_logout
@@ -19,27 +20,29 @@ class AdminView(ctk.CTkFrame):
         self.is_busy = False
         self.error_after_id = None
 
-        header = ctk.CTkFrame(self, fg_color="#0F172A", corner_radius=0, height=76)
+        header = ctk.CTkFrame(
+            self, fg_color=COLORS["admin_header"], corner_radius=0, height=76
+        )
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
             header,
             text="จัดการข้อมูลยาในระบบ",
             font=("Helvetica", 20, "bold"),
-            text_color="#FFFFFF",
+            text_color=COLORS["white"],
         ).pack(side="left", padx=24)
         ctk.CTkLabel(
             header,
             text=f"ผู้ดูแลระบบ: {user.get('userName', '-')}",
             font=("Helvetica", 12),
-            text_color="#CBD5E1",
+            text_color=COLORS["admin_header_text"],
         ).pack(side="left", padx=12)
         self.logout_button = ctk.CTkButton(
             header,
             text="ออกจากระบบ",
             width=110,
-            fg_color="#DC2626",
-            hover_color="#B91C1C",
+            fg_color=COLORS["danger"],
+            hover_color=COLORS["danger_hover"],
             command=self.logout,
         )
         self.logout_button.pack(side="right", padx=20)
@@ -53,7 +56,7 @@ class AdminView(ctk.CTkFrame):
         ctk.CTkLabel(
             toolbar,
             text="เพิ่มและลบข้อมูลผ่าน API ของระบบ",
-            text_color="#475569",
+            text_color=COLORS["text_muted"],
         ).pack(side="left")
         self.refresh_button = ctk.CTkButton(
             toolbar, text="รีเฟรช", width=90, command=self.refresh
@@ -62,7 +65,11 @@ class AdminView(ctk.CTkFrame):
         self.busy_buttons.append(self.refresh_button)
 
         self.status_label = ctk.CTkLabel(
-            content, text="", anchor="w", wraplength=800, text_color="#475569"
+            content,
+            text="",
+            anchor="w",
+            wraplength=800,
+            text_color=COLORS["text_muted"],
         )
         self.status_label.pack(fill="x", pady=(0, 6))
         self.loading_bar = ctk.CTkProgressBar(
@@ -78,7 +85,9 @@ class AdminView(ctk.CTkFrame):
         self.refresh()
 
     def _build_medicine_tab(self):
-        form = ctk.CTkFrame(self.medicine_tab, fg_color="#FFFFFF", corner_radius=12)
+        form = ctk.CTkFrame(
+            self.medicine_tab, fg_color=COLORS["surface"], corner_radius=12
+        )
         form.pack(fill="x", padx=8, pady=(8, 12))
 
         fields = ctk.CTkFrame(form, fg_color="transparent")
@@ -133,7 +142,9 @@ class AdminView(ctk.CTkFrame):
         self.medicine_list.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
     def _build_type_tab(self):
-        form = ctk.CTkFrame(self.type_tab, fg_color="#FFFFFF", corner_radius=12)
+        form = ctk.CTkFrame(
+            self.type_tab, fg_color=COLORS["surface"], corner_radius=12
+        )
         form.pack(fill="x", padx=8, pady=(8, 12))
 
         ctk.CTkLabel(form, text="ชื่อประเภทยา").pack(
@@ -311,7 +322,7 @@ class AdminView(ctk.CTkFrame):
             self.error_after_id = None
         self.status_label.configure(
             text=message,
-            text_color="#B91C1C" if error else "#475569",
+            text_color=COLORS["error"] if error else COLORS["text_muted"],
         )
         if error:
             self.error_after_id = self.after(3000, self._clear_error)
@@ -359,24 +370,26 @@ class AdminView(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.type_list,
                 text="ยังไม่มีประเภทยา",
-                text_color="#64748B",
+                text_color=COLORS["text_secondary"],
             ).pack(pady=18)
             return
         for medicine_type in self.medicine_types:
-            row = ctk.CTkFrame(self.type_list, fg_color="#FFFFFF", corner_radius=10)
+            row = ctk.CTkFrame(
+                self.type_list, fg_color=COLORS["surface"], corner_radius=10
+            )
             row.pack(fill="x", pady=4)
             ctk.CTkLabel(
                 row,
                 text=medicine_type.get("medTypeName", "-"),
                 font=("Helvetica", 13, "bold"),
-                text_color="#0F172A",
+                text_color=COLORS["text"],
             ).pack(side="left", padx=14, pady=12)
             ctk.CTkButton(
                 row,
                 text="ลบ",
                 width=64,
-                fg_color="#DC2626",
-                hover_color="#B91C1C",
+                fg_color=COLORS["danger"],
+                hover_color=COLORS["danger_hover"],
                 command=lambda item=medicine_type: self._delete_medicine_type(item),
             ).pack(side="right", padx=12, pady=8)
 
@@ -387,7 +400,7 @@ class AdminView(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.medicine_list,
                 text="ยังไม่มีรายการยา",
-                text_color="#64748B",
+                text_color=COLORS["text_secondary"],
             ).pack(pady=18)
             return
         for medicine in self.medicines:
@@ -399,7 +412,9 @@ class AdminView(ctk.CTkFrame):
                 ),
                 "ไม่พบประเภท",
             )
-            row = ctk.CTkFrame(self.medicine_list, fg_color="#FFFFFF", corner_radius=10)
+            row = ctk.CTkFrame(
+                self.medicine_list, fg_color=COLORS["surface"], corner_radius=10
+            )
             row.pack(fill="x", pady=4)
             details = ctk.CTkFrame(row, fg_color="transparent")
             details.pack(side="left", fill="x", expand=True, padx=14, pady=9)
@@ -407,7 +422,7 @@ class AdminView(ctk.CTkFrame):
                 details,
                 text=medicine.get("medName", "-"),
                 font=("Helvetica", 13, "bold"),
-                text_color="#0F172A",
+                text_color=COLORS["text"],
                 anchor="w",
             ).pack(anchor="w")
             ctk.CTkLabel(
@@ -419,15 +434,15 @@ class AdminView(ctk.CTkFrame):
                     else f"{type_name} · {medicine.get('unitName', '-')} · ไม่ระบุ BUD"
                 ),
                 font=("Helvetica", 11),
-                text_color="#64748B",
+                text_color=COLORS["text_secondary"],
                 anchor="w",
             ).pack(anchor="w", pady=(2, 0))
             ctk.CTkButton(
                 row,
                 text="ลบ",
                 width=64,
-                fg_color="#DC2626",
-                hover_color="#B91C1C",
+                fg_color=COLORS["danger"],
+                hover_color=COLORS["danger_hover"],
                 command=lambda item=medicine: self._delete_medicine(item),
             ).pack(side="right", padx=12, pady=8)
 

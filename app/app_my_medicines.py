@@ -12,6 +12,7 @@ from modules.analytics import AnalyticsModule
 from .api_client import APIRequestError
 from .notifications import MedicineReminder
 from .settings import ModernSettingsWindow
+from .theme import COLORS
 
 TIME_PERIODS = {
     1: "เช้า",
@@ -35,11 +36,12 @@ FOOD_OPTIONS = {
 
 
 class MyMedicinesView(ctk.CTkFrame):
-    def __init__(self, master, user, api_request, on_logout):
-        super().__init__(master, fg_color="#F1F5F9")
+    def __init__(self, master, user, api_request, on_logout, on_theme_change):
+        super().__init__(master, fg_color=COLORS["background"])
         self.user = user
         self.api_request = api_request
         self.on_logout = on_logout
+        self.on_theme_change = on_theme_change
         self.medicine_types = []
         self.catalog_medicines = []
         self.user_medicines = []
@@ -51,20 +53,22 @@ class MyMedicinesView(ctk.CTkFrame):
         self.reminder = MedicineReminder()
         self.analytics = AnalyticsModule()
 
-        header = ctk.CTkFrame(self, fg_color="#0F766E", corner_radius=0, height=72)
+        header = ctk.CTkFrame(
+            self, fg_color=COLORS["teal"], corner_radius=0, height=72
+        )
         header.pack(fill="x")
         header.pack_propagate(False)
         ctk.CTkLabel(
             header,
             text="ข้อมูลยาของฉัน",
             font=("Helvetica", 20, "bold"),
-            text_color="#FFFFFF",
+            text_color=COLORS["white"],
         ).pack(side="left", padx=24)
         ctk.CTkLabel(
             header,
             text=f"ผู้ใช้: {user.get('userName', '-')}",
             font=("Helvetica", 12),
-            text_color="#CCFBF1",
+            text_color=COLORS["teal_light"],
         ).pack(side="left", padx=12)
         self.logout_button = ctk.CTkButton(
             header,
@@ -72,8 +76,8 @@ class MyMedicinesView(ctk.CTkFrame):
             width=42,
             height=40,
             font=("Segoe UI Symbol", 18),
-            fg_color="#DC2626",
-            hover_color="#B91C1C",
+            fg_color=COLORS["danger"],
+            hover_color=COLORS["danger_hover"],
             command=self.logout,
         )
         self.logout_button.pack(side="right", padx=20)
@@ -84,9 +88,9 @@ class MyMedicinesView(ctk.CTkFrame):
             width=42,
             height=40,
             font=("Segoe UI Symbol", 20),
-            fg_color="#FFFFFF",
-            text_color="#0F766E",
-            hover_color="#CCFBF1",
+            fg_color=COLORS["surface"],
+            text_color=COLORS["teal_text"],
+            hover_color=COLORS["teal_light"],
             command=self.show_medication_history,
         )
         self.history_button.pack(side="right", padx=(0, 8))
@@ -96,9 +100,9 @@ class MyMedicinesView(ctk.CTkFrame):
             width=42,
             height=40,
             font=("Segoe UI Symbol", 18),
-            fg_color="#FFFFFF",
-            text_color="#0F766E",
-            hover_color="#CCFBF1",
+            fg_color=COLORS["surface"],
+            text_color=COLORS["teal_text"],
+            hover_color=COLORS["teal_light"],
             command=self.show_settings,
         )
         self.settings_button.pack(side="right", padx=(0, 8))
@@ -107,18 +111,24 @@ class MyMedicinesView(ctk.CTkFrame):
         content.pack(fill="both", expand=True, padx=20, pady=14)
 
         self.status_label = ctk.CTkLabel(
-            content, text="", anchor="w", wraplength=800, text_color="#475569"
+            content,
+            text="",
+            anchor="w",
+            wraplength=800,
+            text_color=COLORS["text_muted"],
         )
         self.status_label.pack(fill="x", pady=(0, 4))
         self.loading_bar = ctk.CTkProgressBar(content, mode="indeterminate", height=4)
 
-        self.add_frame = ctk.CTkFrame(content, fg_color="#FFFFFF", corner_radius=12)
+        self.add_frame = ctk.CTkFrame(
+            content, fg_color=COLORS["surface"], corner_radius=12
+        )
         self.add_frame.pack(side="bottom", fill="x", pady=(12, 0))
         ctk.CTkLabel(
             self.add_frame,
             text="3. เพิ่มยาของฉัน",
             font=("Helvetica", 15, "bold"),
-            text_color="#0F172A",
+            text_color=COLORS["text"],
         ).pack(anchor="w", padx=14, pady=(10, 4))
 
         selectors = ctk.CTkFrame(self.add_frame, fg_color="transparent")
@@ -197,10 +207,10 @@ class MyMedicinesView(ctk.CTkFrame):
             content,
             text="1. สรุปยาแต่ละช่วงเวลา",
             font=("Helvetica", 16, "bold"),
-            text_color="#0F172A",
+            text_color=COLORS["text"],
         ).pack(anchor="w", pady=(0, 6))
         self.period_summary = ctk.CTkFrame(
-            content, fg_color="#FFFFFF", corner_radius=12
+            content, fg_color=COLORS["surface"], corner_radius=12
         )
         self.period_summary.pack(fill="x", pady=(0, 12))
         self.period_summary_labels = {}
@@ -213,13 +223,13 @@ class MyMedicinesView(ctk.CTkFrame):
                 width=150,
                 anchor="w",
                 font=("Helvetica", 12, "bold"),
-                text_color="#0F766E",
+                text_color=COLORS["teal_text"],
             ).pack(side="left", padx=(4, 8))
             summary_label = ctk.CTkLabel(
                 row,
                 text="ไม่มีรายการยา",
                 anchor="w",
-                text_color="#94A3B8",
+                text_color=COLORS["text_subtle"],
             )
             summary_label.pack(side="left", fill="x", expand=True)
             self.period_summary_labels[period_id] = summary_label
@@ -231,13 +241,13 @@ class MyMedicinesView(ctk.CTkFrame):
             width=150,
             anchor="w",
             font=("Helvetica", 12, "bold"),
-            text_color="#0F766E",
+            text_color=COLORS["teal_text"],
         ).pack(side="left", padx=(4, 8))
         self.as_needed_summary_label = ctk.CTkLabel(
             as_needed_row,
             text="ไม่มีรายการยา",
             anchor="w",
-            text_color="#94A3B8",
+            text_color=COLORS["text_subtle"],
         )
         self.as_needed_summary_label.pack(side="left", fill="x", expand=True)
 
@@ -247,7 +257,7 @@ class MyMedicinesView(ctk.CTkFrame):
             schedule_header,
             text="2. รายการยาทั้งหมดวันนี้",
             font=("Helvetica", 16, "bold"),
-            text_color="#0F172A",
+            text_color=COLORS["text"],
         ).pack(side="left")
         self.refresh_button = ctk.CTkButton(
             schedule_header,
@@ -444,7 +454,7 @@ class MyMedicinesView(ctk.CTkFrame):
             self.error_after_id = None
         self.status_label.configure(
             text=message,
-            text_color="#B91C1C" if error else "#475569",
+            text_color=COLORS["error"] if error else COLORS["text_muted"],
         )
         if error:
             self.error_after_id = self.after(3000, self._clear_error)
@@ -514,7 +524,7 @@ class MyMedicinesView(ctk.CTkFrame):
                     entries.append(f"{medicine_name} ({unit})")
             self.period_summary_labels[period_id].configure(
                 text=", ".join(entries) if entries else "ไม่มีรายการยา",
-                text_color="#0F172A" if entries else "#94A3B8",
+                text_color=COLORS["text"] if entries else COLORS["text_subtle"],
             )
         as_needed = [
             user_medicine
@@ -533,7 +543,9 @@ class MyMedicinesView(ctk.CTkFrame):
                 as_needed_entries.append(f"{medicine_name} ({unit})")
         self.as_needed_summary_label.configure(
             text=", ".join(as_needed_entries) if as_needed_entries else "ไม่มีรายการยา",
-            text_color="#0F172A" if as_needed_entries else "#94A3B8",
+            text_color=(
+                COLORS["text"] if as_needed_entries else COLORS["text_subtle"]
+            ),
         )
 
         for child in self.schedule_list.winfo_children():
@@ -542,7 +554,7 @@ class MyMedicinesView(ctk.CTkFrame):
             ctk.CTkLabel(
                 self.schedule_list,
                 text="ยังไม่มีรายการยาในวันนี้",
-                text_color="#64748B",
+                text_color=COLORS["text_secondary"],
             ).pack(pady=18)
             return
 
@@ -553,7 +565,7 @@ class MyMedicinesView(ctk.CTkFrame):
             )
 
     def _render_scheduled_medicine(self, parent, medicine, user_medicine):
-        row = ctk.CTkFrame(parent, fg_color="#F8FAFC", corner_radius=8)
+        row = ctk.CTkFrame(parent, fg_color=COLORS["surface_alt"], corner_radius=8)
         row.pack(fill="x", padx=10, pady=4)
         details = ctk.CTkFrame(row, fg_color="transparent")
         details.pack(side="left", fill="x", expand=True, padx=10, pady=8)
@@ -583,7 +595,7 @@ class MyMedicinesView(ctk.CTkFrame):
             details,
             text=medicine_name,
             font=("Helvetica", 12, "bold"),
-            text_color="#0F172A",
+            text_color=COLORS["text"],
             anchor="w",
         ).pack(anchor="w")
         if description:
@@ -591,15 +603,15 @@ class MyMedicinesView(ctk.CTkFrame):
                 details,
                 text=description,
                 font=("Helvetica", 11),
-                text_color="#64748B",
+                text_color=COLORS["text_secondary"],
                 anchor="w",
             ).pack(anchor="w", pady=(2, 0))
         ctk.CTkButton(
             row,
             text="ลบ",
             width=75,
-            fg_color="#DC2626",
-            hover_color="#B91C1C",
+            fg_color=COLORS["danger"],
+            hover_color=COLORS["danger_hover"],
             command=lambda item=user_medicine, name=medicine_name: self._delete_medicine(
                 item, name
             ),
@@ -622,7 +634,9 @@ class MyMedicinesView(ctk.CTkFrame):
 
     def show_medication_history(self):
         records = self.analytics.get_filtered_history()
-        figure = self.analytics.create_medication_timeline_figure(records)
+        figure = self.analytics.create_medication_timeline_figure(
+            records, dark_mode=ctk.get_appearance_mode() == "Dark"
+        )
         if figure is None:
             messagebox.showinfo("ประวัติการกินยา", "ไม่พบข้อมูลประวัติการกินยา")
             return
@@ -637,7 +651,7 @@ class MyMedicinesView(ctk.CTkFrame):
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=12, pady=12)
 
     def show_settings(self):
-        ModernSettingsWindow(self)
+        ModernSettingsWindow(self, on_theme_change=self.on_theme_change)
 
     def destroy(self):
         self.reminder.stop()

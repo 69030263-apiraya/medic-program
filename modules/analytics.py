@@ -124,16 +124,16 @@ class AnalyticsModule:
         filtered.sort(key=lambda x: x['date'])
         return filtered
 
-    def create_medication_timeline_figure(self, records):
+    def create_medication_timeline_figure(self, records, dark_mode=False):
         """สร้าง Figure สำหรับแสดงกราฟ Timeline ประวัติการกินยา"""
         if not records:
             return None
 
         fig = Figure(figsize=(9.5, 4.8))
-        self._draw_medication_timeline(fig, records)
+        self._draw_medication_timeline(fig, records, dark_mode)
         return fig
 
-    def _draw_medication_timeline(self, fig, records):
+    def _draw_medication_timeline(self, fig, records, dark_mode=False):
         dates = [item['date'] for item in records]
         meds = [item['med_name'] for item in records]
         statuses = [item['status'] for item in records]
@@ -142,15 +142,45 @@ class AnalyticsModule:
         colors = ['#2ecc71' if s == 'on-time' else '#e74c3c' for s in statuses]
 
         ax = fig.subplots()
-        ax.plot(dates, meds, color='#bdc3c7', linestyle='--', linewidth=1.5, zorder=1)
-        ax.scatter(dates, meds, c=colors, s=140, zorder=2, edgecolors='white', linewidth=1.5)
+        background = '#0F172A' if dark_mode else '#FFFFFF'
+        axes_background = '#1E293B' if dark_mode else '#FFFFFF'
+        foreground = '#F8FAFC' if dark_mode else '#222222'
+        grid_color = '#64748B' if dark_mode else '#808080'
+        fig.patch.set_facecolor(background)
+        ax.set_facecolor(axes_background)
+        ax.plot(
+            dates,
+            meds,
+            color='#94A3B8' if dark_mode else '#bdc3c7',
+            linestyle='--',
+            linewidth=1.5,
+            zorder=1,
+        )
+        ax.scatter(
+            dates,
+            meds,
+            c=colors,
+            s=140,
+            zorder=2,
+            edgecolors=axes_background,
+            linewidth=1.5,
+        )
 
-        ax.set_xlabel("วันที่", fontsize=11, fontweight='bold')
-        ax.set_ylabel("ชื่อยา", fontsize=11, fontweight='bold')
-        ax.set_title("ประวัติการกินยา (Medication Timeline)", fontsize=13, fontweight='bold', pad=15)
+        ax.set_xlabel("วันที่", fontsize=11, fontweight='bold', color=foreground)
+        ax.set_ylabel("ชื่อยา", fontsize=11, fontweight='bold', color=foreground)
+        ax.set_title(
+            "ประวัติการกินยา (Medication Timeline)",
+            fontsize=13,
+            fontweight='bold',
+            pad=15,
+            color=foreground,
+        )
 
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m/%Y'))
-        ax.grid(True, linestyle=':', alpha=0.6, axis='x')
+        ax.tick_params(colors=foreground)
+        for spine in ax.spines.values():
+            spine.set_color(grid_color)
+        ax.grid(True, linestyle=':', alpha=0.6, axis='x', color=grid_color)
         fig.autofmt_xdate()
         fig.tight_layout()
 

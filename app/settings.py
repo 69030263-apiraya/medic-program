@@ -4,8 +4,33 @@ import tkinter as tk
 from tkinter import messagebox
 
 
+def get_config_path():
+	local_app_data = os.environ.get("LOCALAPPDATA")
+	if not local_app_data:
+		local_app_data = os.path.join(
+			os.path.expanduser("~"), "AppData", "Local"
+		)
+	return os.path.join(local_app_data, "MedicProgram", "user_config.json")
+
+
+def load_saved_theme(config_path=None):
+	if config_path is None:
+		config_path = get_config_path()
+	if not os.path.exists(config_path):
+		return "light"
+	try:
+		with open(config_path, "r", encoding="utf-8") as config_file:
+			data = json.load(config_file)
+	except (OSError, ValueError, TypeError) as error:
+		print(f"Error loading config: {error}")
+		return "light"
+	if isinstance(data, dict) and data.get("theme") in ("light", "dark"):
+		return data["theme"]
+	return "light"
+
+
 class ModernSettingsWindow:
-	def __init__(self, root=None):
+	def __init__(self, root=None, on_theme_change=None):
 		if root is None:
 			self.root = tk.Tk()
 			self.is_standalone = True
@@ -17,7 +42,8 @@ class ModernSettingsWindow:
 		self.root.geometry("520x680")
 		self.root.resizable(False, False)
 
-		self.config_path = "user_config.json"
+		self.on_theme_change_callback = on_theme_change
+		self.config_path = get_config_path()
 		self.themes = {
 			"light": {
 				"bg": "#F8FAFC",
@@ -78,6 +104,7 @@ class ModernSettingsWindow:
 			"notify_enabled": self.notify_enabled.get(),
 		}
 		try:
+			os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
 			with open(self.config_path, "w", encoding="utf-8") as config_file:
 				json.dump(data, config_file, ensure_ascii=False, indent=4)
 			messagebox.showinfo(
@@ -230,7 +257,10 @@ class ModernSettingsWindow:
 
 	def on_theme_change(self):
 		"""เมื่อเปลี่ยน Radio Button Theme"""
-		self.apply_theme(self.current_theme.get())
+		theme_name = self.current_theme.get()
+		self.apply_theme(theme_name)
+		if self.on_theme_change_callback is not None:
+			self.on_theme_change_callback(theme_name)
 
 	def apply_theme(self, theme_name):
 		"""สลับสี UI ทั้งหมดตามโทน Light / Dark"""

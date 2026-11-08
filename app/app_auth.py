@@ -3,30 +3,31 @@ import threading
 import customtkinter as ctk
 
 from .api_client import APIRequestError
+from .theme import COLORS
 
 
 class AuthView(ctk.CTkFrame):
     def __init__(self, master, api_request, on_authenticated):
-        super().__init__(master, fg_color="#F1F5F9")
+        super().__init__(master, fg_color=COLORS["background"])
         self.api_request = api_request
         self.on_authenticated = on_authenticated
         self.mode = "login"
         self.error_after_id = None
 
-        card = ctk.CTkFrame(self, fg_color="#FFFFFF", corner_radius=16)
+        card = ctk.CTkFrame(self, fg_color=COLORS["surface"], corner_radius=16)
         card.pack(fill="both", expand=True, padx=32, pady=32)
 
         ctk.CTkLabel(
             card,
             text="ระบบจัดการคลินิก",
             font=("Helvetica", 22, "bold"),
-            text_color="#0F172A",
+            text_color=COLORS["text"],
         ).pack(pady=(32, 4))
         ctk.CTkLabel(
             card,
             text="เข้าสู่ระบบหรือสร้างบัญชีผู้ใช้",
             font=("Helvetica", 13),
-            text_color="#64748B",
+            text_color=COLORS["text_secondary"],
         ).pack(pady=(0, 24))
 
         form = ctk.CTkFrame(card, fg_color="transparent")
@@ -36,7 +37,7 @@ class AuthView(ctk.CTkFrame):
             form,
             text="ชื่อผู้ใช้",
             font=("Helvetica", 12, "bold"),
-            text_color="#334155",
+            text_color=COLORS["text_muted"],
         ).pack(anchor="w", pady=(0, 6))
         self.username_entry = ctk.CTkEntry(
             form, placeholder_text="ชื่อผู้ใช้", height=40, corner_radius=8
@@ -47,7 +48,7 @@ class AuthView(ctk.CTkFrame):
             form,
             text="รหัสผ่าน",
             font=("Helvetica", 12, "bold"),
-            text_color="#334155",
+            text_color=COLORS["text_muted"],
         ).pack(anchor="w", pady=(0, 6))
         self.password_entry = ctk.CTkEntry(
             form,
@@ -60,7 +61,7 @@ class AuthView(ctk.CTkFrame):
         self.password_entry.bind("<Return>", lambda _: self.submit())
 
         self.status_label = ctk.CTkLabel(
-            form, text="", text_color="#B91C1C", wraplength=320
+            form, text="", text_color=COLORS["error"], wraplength=320
         )
         self.status_label.pack(fill="x", pady=(0, 8))
 
@@ -80,8 +81,8 @@ class AuthView(ctk.CTkFrame):
             form,
             text="ยังไม่มีบัญชี? สมัครสมาชิก",
             fg_color="transparent",
-            text_color="#2563EB",
-            hover_color="#EFF6FF",
+            text_color=COLORS["blue"],
+            hover_color=COLORS["blue_hover"],
             command=self.toggle_mode,
         )
         self.mode_button.pack(fill="x", pady=(0, 20))
@@ -114,7 +115,9 @@ class AuthView(ctk.CTkFrame):
         self.password_entry.configure(state="disabled")
         self.loading_bar.pack(fill="x", pady=(0, 8))
         self.loading_bar.start()
-        self.status_label.configure(text="กำลังเชื่อมต่อ...", text_color="#475569")
+        self.status_label.configure(
+            text="กำลังเชื่อมต่อ...", text_color=COLORS["text_muted"]
+        )
 
         threading.Thread(
             target=self._request_auth,
@@ -151,7 +154,7 @@ class AuthView(ctk.CTkFrame):
 
     def _show_error(self, message):
         self._clear_error()
-        self.status_label.configure(text=message, text_color="#B91C1C")
+        self.status_label.configure(text=message, text_color=COLORS["error"])
         self.error_after_id = self.after(3000, self._clear_error)
 
     def _clear_error(self):
