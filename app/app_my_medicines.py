@@ -11,6 +11,7 @@ from modules.analytics import AnalyticsModule
 
 from .api_client import APIRequestError
 from .notifications import MedicineReminder
+from .settings import SettingsWindow
 
 TIME_PERIODS = {
     1: "เช้า",
@@ -67,8 +68,10 @@ class MyMedicinesView(ctk.CTkFrame):
         ).pack(side="left", padx=12)
         self.logout_button = ctk.CTkButton(
             header,
-            text="ออกจากระบบ",
-            width=120,
+            text="⏻",
+            width=42,
+            height=40,
+            font=("Segoe UI Symbol", 18),
             fg_color="#DC2626",
             hover_color="#B91C1C",
             command=self.logout,
@@ -77,14 +80,28 @@ class MyMedicinesView(ctk.CTkFrame):
         self.busy_buttons.append(self.logout_button)
         self.history_button = ctk.CTkButton(
             header,
-            text="ประวัติ",
-            width=120,
+            text="◷",
+            width=42,
+            height=40,
+            font=("Segoe UI Symbol", 20),
             fg_color="#FFFFFF",
             text_color="#0F766E",
             hover_color="#CCFBF1",
             command=self.show_medication_history,
         )
-        self.history_button.pack(side="right", padx=(0, 12))
+        self.history_button.pack(side="right", padx=(0, 8))
+        self.settings_button = ctk.CTkButton(
+            header,
+            text="⚙",
+            width=42,
+            height=40,
+            font=("Segoe UI Symbol", 18),
+            fg_color="#FFFFFF",
+            text_color="#0F766E",
+            hover_color="#CCFBF1",
+            command=self.show_settings,
+        )
+        self.settings_button.pack(side="right", padx=(0, 8))
 
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=20, pady=14)
@@ -618,6 +635,9 @@ class MyMedicinesView(ctk.CTkFrame):
         canvas = FigureCanvasTkAgg(figure, master=window)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=12, pady=12)
+
+    def show_settings(self):
+        SettingsWindow(self)
 
     def destroy(self):
         self.reminder.stop()
