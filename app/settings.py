@@ -284,3 +284,4 @@ if __name__ == "__main__":
 	root.withdraw()
 	app = ModernSettingsWindow(root)
 	app.root.mainloop()
+
