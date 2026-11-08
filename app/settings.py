@@ -1,187 +1,286 @@
 import json
 import os
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 
 
-class SettingsWindow(tk.Toplevel):
+class ModernSettingsWindow:
+	def __init__(self, root=None):
+		if root is None:
+			self.root = tk.Tk()
+			self.is_standalone = True
+		else:
+			self.root = tk.Toplevel(root)
+			self.is_standalone = False
 
-  def __init__(self, parent):
-    super().__init__(parent)
-    self.title("⚙️ ตั้งค่าระบบ (Settings Module)")
-    self.geometry("420x480")
-    self.resizable(False, False)
+		self.root.title("การตั้งค่าระบบ - Settings")
+		self.root.geometry("520x680")
+		self.root.resizable(False, False)
 
-    # ไฟล์สำหรับเก็บ Config Local
-    self.config_file = "user_config.json"
+		self.config_path = "user_config.json"
+		self.themes = {
+			"light": {
+				"bg": "#F8FAFC",
+				"card": "#FFFFFF",
+				"text": "#0F172A",
+				"subtext": "#64748B",
+				"border": "#E2E8F0",
+				"primary": "#2563EB",
+				"primary_hover": "#1D4ED8",
+				"input_bg": "#F1F5F9",
+				"entry_border": "#CBD5E1",
+			},
+			"dark": {
+				"bg": "#0F172A",
+				"card": "#1E293B",
+				"text": "#F8FAFC",
+				"subtext": "#94A3B8",
+				"border": "#334155",
+				"primary": "#3B82F6",
+				"primary_hover": "#60A5FA",
+				"input_bg": "#0F172A",
+				"entry_border": "#475569",
+			},
+		}
 
-    # ตัวแปรสำหรับเก็บค่า
-    self.theme_var = tk.StringVar(value="Light")
-    self.volume_var = tk.IntVar(value=80)
-    self.line_token_var = tk.StringVar()
+		self.current_theme = tk.StringVar(value="light")
+		self.volume_level = tk.IntVar(value=70)
+		self.line_token = tk.StringVar(value="")
+		self.notify_enabled = tk.BooleanVar(value=True)
 
-    # สร้าง UI Component
-    self.create_widgets()
+		self.load_config()
+		self.setup_ui()
+		self.apply_theme(self.current_theme.get())
 
-    # โหลดค่า Config เดิมที่บันทึกไว้
-    self.load_config()
+		if self.is_standalone:
+			self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
 
-  def create_widgets(self):
-    # Header
-    header_frame = tk.Frame(self, pady=10)
-    header_frame.pack(fill="x")
-    title_label = tk.Label(
-        header_frame,
-        text="⚙️ ตั้งค่าระบบ",
-        font=("Helvetica", 16, "bold"),
-        fg="#2563EB",
-    )
-    title_label.pack()
-    subtitle_label = tk.Label(
-        header_frame,
-        text="ปรับแต่งการทำงานและบันทึก Local Config",
-        font=("Helvetica", 9),
-        fg="gray",
-    )
-    subtitle_label.pack()
+	def load_config(self):
+		"""โหลดค่าคอนฟิกจากไฟล์ JSON"""
+		if os.path.exists(self.config_path):
+			try:
+				with open(self.config_path, "r", encoding="utf-8") as config_file:
+					data = json.load(config_file)
+				theme = data.get("theme", "light")
+				self.current_theme.set(theme if theme in self.themes else "light")
+				self.volume_level.set(max(0, min(100, int(data.get("volume", 70)))))
+				self.line_token.set(str(data.get("line_token", "")))
+				self.notify_enabled.set(bool(data.get("notify_enabled", True)))
+			except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+				print(f"Error loading config: {error}")
 
-    # Content Frame
-    content_frame = tk.Frame(self, padx=20, pady=10)
-    content_frame.pack(fill="both", expand=True)
+	def save_config(self):
+		"""บันทึกค่าคอนฟิกลงไฟล์ JSON"""
+		data = {
+			"theme": self.current_theme.get(),
+			"volume": self.volume_level.get(),
+			"line_token": self.line_token.get().strip(),
+			"notify_enabled": self.notify_enabled.get(),
+		}
+		try:
+			with open(self.config_path, "w", encoding="utf-8") as config_file:
+				json.dump(data, config_file, ensure_ascii=False, indent=4)
+			messagebox.showinfo(
+				"สำเร็จ", "บันทึกการตั้งค่าเรียบร้อยแล้ว!", parent=self.root
+			)
+		except (OSError, TypeError, ValueError) as error:
+			messagebox.showerror(
+				"ผิดพลาด", f"ไม่สามารถบันทึกข้อมูลได้: {error}", parent=self.root
+			)
 
-    # 1. เลือกธีมหน้าจอ (Theme)
-    theme_frame = tk.LabelFrame(
-        content_frame,
-        text=" ธีมหน้าจอ ",
-        font=("Helvetica", 10, "bold"),
-        padx=10,
-        pady=10,
-    )
-    theme_frame.pack(fill="x", pady=5)
+	def setup_ui(self):
+		"""สร้างโครงสร้างหน้าต่าง (Card-based UI Layout)"""
+		self.main_frame = tk.Frame(self.root)
+		self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-    tk.Radiobutton(
-        theme_frame,
-        text="☀️ Light Mode",
-        variable=self.theme_var,
-        value="Light",
-    ).pack(side="left", padx=10)
-    tk.Radiobutton(
-        theme_frame, text="🌙 Dark Mode", variable=self.theme_var, value="Dark"
-    ).pack(side="left", padx=10)
+		self.header_label = tk.Label(
+			self.main_frame,
+			text="⚙️ ตั้งค่าการใช้งาน",
+			font=("Segoe UI", 18, "bold"),
+			anchor="w",
+		)
+		self.header_label.pack(fill="x", pady=(0, 15))
 
-    # 2. ปรับระดับเสียงเตือน (Volume)
-    volume_frame = tk.LabelFrame(
-        content_frame,
-        text=" 🔔 ระดับเสียงเตือน ",
-        font=("Helvetica", 10, "bold"),
-        padx=10,
-        pady=10,
-    )
-    volume_frame.pack(fill="x", pady=5)
+		self.card_theme = tk.LabelFrame(
+			self.main_frame,
+			text=" 🎨 ธีมและการแสดงผล ",
+			font=("Segoe UI", 11, "bold"),
+			padx=15,
+			pady=15,
+			bd=1,
+			relief="solid",
+		)
+		self.card_theme.pack(fill="x", pady=(0, 15))
 
-    self.vol_label = tk.Label(
-        volume_frame, text=f"ระดับเสียง: {self.volume_var.get()}%"
-    )
-    self.vol_label.pack(anchor="w")
+		self.radio_light = tk.Radiobutton(
+			self.card_theme,
+			text="☀️ โหมดสว่าง (Light Mode)",
+			variable=self.current_theme,
+			value="light",
+			font=("Segoe UI", 10),
+			command=self.on_theme_change,
+		)
+		self.radio_light.pack(anchor="w", pady=4)
 
-    vol_scale = ttk.Scale(
-        volume_frame,
-        from_=0,
-        to=100,
-        variable=self.volume_var,
-        command=self.update_volume_label,
-    )
-    vol_scale.pack(fill="x", pady=5)
+		self.radio_dark = tk.Radiobutton(
+			self.card_theme,
+			text="🌙 โหมดมืด (Dark Mode)",
+			variable=self.current_theme,
+			value="dark",
+			font=("Segoe UI", 10),
+			command=self.on_theme_change,
+		)
+		self.radio_dark.pack(anchor="w", pady=4)
 
-    test_audio_btn = tk.Button(
-        volume_frame,
-        text="▶️ ทดลองฟังเสียง",
-        command=self.test_sound,
-        bg="#E5E7EB",
-        font=("Helvetica", 9),
-    )
-    test_audio_btn.pack(anchor="e", pady=2)
+		self.card_sound = tk.LabelFrame(
+			self.main_frame,
+			text=" 🔊 การแจ้งเตือนด้วยเสียง ",
+			font=("Segoe UI", 11, "bold"),
+			padx=15,
+			pady=15,
+			bd=1,
+			relief="solid",
+		)
+		self.card_sound.pack(fill="x", pady=(0, 15))
 
-    # 3. ช่องกรอก LINE Notify Token
-    token_frame = tk.LabelFrame(
-        content_frame,
-        text=" 💬 LINE Notify Token ",
-        font=("Helvetica", 10, "bold"),
-        padx=10,
-        pady=10,
-    )
-    token_frame.pack(fill="x", pady=5)
+		sound_header = tk.Frame(self.card_sound)
+		sound_header.pack(fill="x")
 
-    token_entry = tk.Entry(
-        token_frame,
-        textvariable=self.line_token_var,
-        font=("Helvetica", 10),
-        show="*",
-    )
-    token_entry.pack(fill="x", pady=2)
-    hint_label = tk.Label(
-        token_frame,
-        text="รับ Token ได้จากเว็บไซต์ LINE Notify",
-        font=("Helvetica", 8),
-        fg="gray",
-    )
-    hint_label.pack(anchor="w")
+		self.lbl_volume = tk.Label(
+			sound_header, text="ระดับเสียงระบบ:", font=("Segoe UI", 10)
+		)
+		self.lbl_volume.pack(side="left")
 
-    # 4. ปุ่มบันทึกการตั้งค่า
-    save_btn = tk.Button(
-        self,
-        text="💾 บันทึกการตั้งค่า (Save Config)",
-        command=self.save_config,
-        bg="#16A34A",
-        fg="white",
-        font=("Helvetica", 11, "bold"),
-        pady=8,
-    )
-    save_btn.pack(fill="x", padx=20, pady=15)
+		self.lbl_vol_val = tk.Label(
+			sound_header,
+			text=f"{self.volume_level.get()}%",
+			font=("Segoe UI", 10, "bold"),
+		)
+		self.lbl_vol_val.pack(side="right")
 
-  def update_volume_label(self, val):
-    self.vol_label.config(text=f"ระดับเสียง: {int(float(val))}%")
+		self.slider_volume = tk.Scale(
+			self.card_sound,
+			from_=0,
+			to=100,
+			orient="horizontal",
+			variable=self.volume_level,
+			showvalue=False,
+			command=self.update_volume_label,
+			bd=0,
+			highlightthickness=0,
+		)
+		self.slider_volume.pack(fill="x", pady=(10, 0))
 
-  def test_sound(self):
-    try:
-      import winsound
+		self.card_line = tk.LabelFrame(
+			self.main_frame,
+			text=" 💬 บริการ LINE Notify ",
+			font=("Segoe UI", 11, "bold"),
+			padx=15,
+			pady=15,
+			bd=1,
+			relief="solid",
+		)
+		self.card_line.pack(fill="x", pady=(0, 20))
 
-      winsound.Beep(880, 250)
-    except Exception:
-      self.bell()
+		self.chk_notify = tk.Checkbutton(
+			self.card_line,
+			text="เปิดใช้งานการส่งข้อความแจ้งเตือน",
+			variable=self.notify_enabled,
+			font=("Segoe UI", 10),
+		)
+		self.chk_notify.pack(anchor="w", pady=(0, 10))
 
-  def save_config(self):
-    config_data = {
-        "theme": self.theme_var.get(),
-        "volume": self.volume_var.get(),
-        "line_token": self.line_token_var.get(),
-    }
+		self.lbl_token = tk.Label(
+			self.card_line, text="LINE Notify Token:", font=("Segoe UI", 9)
+		)
+		self.lbl_token.pack(anchor="w")
 
-    with open(self.config_file, "w", encoding="utf-8") as f:
-      json.dump(config_data, f, ensure_ascii=False, indent=4)
+		self.entry_token = tk.Entry(
+			self.card_line,
+			textvariable=self.line_token,
+			font=("Consolas", 10),
+			show="•",
+			bd=1,
+			relief="solid",
+		)
+		self.entry_token.pack(fill="x", ipady=6, pady=(5, 5))
 
-    self.test_sound()
-    messagebox.showinfo(
-        "สำเร็จ", "💾 บันทึกการตั้งค่าลง Local Config เรียบร้อยแล้ว!"
-    )
+		btn_box = tk.Frame(self.main_frame)
+		btn_box.pack(fill="x", side="bottom")
 
-  def load_config(self):
-    if os.path.exists(self.config_file):
-      try:
-        with open(self.config_file, "r", encoding="utf-8") as f:
-          config_data = json.load(f)
-          self.theme_var.set(config_data.get("theme", "Light"))
-          self.volume_var.set(config_data.get("volume", 80))
-          self.line_token_var.set(config_data.get("line_token", ""))
-          self.update_volume_label(self.volume_var.get())
-      except Exception as e:
-        print("Error loading config:", e)
+		self.btn_save = tk.Button(
+			btn_box,
+			text="💾 บันทึกการตั้งค่า",
+			font=("Segoe UI", 10, "bold"),
+			bg="#2563EB",
+			fg="white",
+			activebackground="#1D4ED8",
+			activeforeground="white",
+			bd=0,
+			padx=20,
+			pady=10,
+			cursor="hand2",
+			command=self.save_config,
+		)
+		self.btn_save.pack(fill="x")
+
+	def update_volume_label(self, value):
+		"""อัปเดตตัวเลขเปอร์เซ็นต์เสียง"""
+		self.lbl_vol_val.config(text=f"{int(float(value))}%")
+
+	def on_theme_change(self):
+		"""เมื่อเปลี่ยน Radio Button Theme"""
+		self.apply_theme(self.current_theme.get())
+
+	def apply_theme(self, theme_name):
+		"""สลับสี UI ทั้งหมดตามโทน Light / Dark"""
+		theme = self.themes.get(theme_name, self.themes["light"])
+
+		self.root.config(bg=theme["bg"])
+		self.main_frame.config(bg=theme["bg"])
+		self.header_label.config(bg=theme["bg"], fg=theme["text"])
+
+		for card in (self.card_theme, self.card_sound, self.card_line):
+			card.config(
+				bg=theme["card"],
+				fg=theme["primary"],
+				bd=1,
+				highlightbackground=theme["border"],
+				relief="solid",
+			)
+
+		for widget in (
+			self.radio_light,
+			self.radio_dark,
+			self.chk_notify,
+			self.lbl_volume,
+			self.lbl_vol_val,
+			self.lbl_token,
+		):
+			widget.config(
+				bg=theme["card"],
+				fg=theme["text"],
+				activebackground=theme["card"],
+				activeforeground=theme["text"],
+				selectcolor=theme["card"],
+			)
+
+		self.slider_volume.config(
+			bg=theme["card"],
+			troughcolor=theme["input_bg"],
+			activebackground=theme["primary"],
+		)
+		self.entry_token.config(
+			bg=theme["input_bg"],
+			fg=theme["text"],
+			insertbackground=theme["text"],
+			bd=1,
+			relief="solid",
+		)
 
 
 if __name__ == "__main__":
-  root = tk.Tk()
-  root.withdraw()
-  app = SettingsWindow(root)
-  app.protocol("WM_DELETE_WINDOW", root.destroy)
-  app.mainloop()
-  
+	root = tk.Tk()
+	root.withdraw()
+	app = ModernSettingsWindow(root)
+	app.root.mainloop()
