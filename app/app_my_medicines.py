@@ -11,7 +11,7 @@ from modules.analytics import AnalyticsModule
 
 from .api_client import APIRequestError
 from .notifications import MedicineReminder
-from .settings import SettingsWindow
+from .settings import ModernSettingsWindow
 
 TIME_PERIODS = {
     1: "เช้า",
@@ -637,7 +637,7 @@ class MyMedicinesView(ctk.CTkFrame):
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=12, pady=12)
 
     def show_settings(self):
-        SettingsWindow(self)
+        ModernSettingsWindow(self)
 
     def destroy(self):
         self.reminder.stop()
