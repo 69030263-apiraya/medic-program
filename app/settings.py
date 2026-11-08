@@ -262,8 +262,10 @@ class ModernSettingsWindow:
 				fg=theme["text"],
 				activebackground=theme["card"],
 				activeforeground=theme["text"],
-				selectcolor=theme["card"],
 			)
+
+		for widget in (self.radio_light, self.radio_dark, self.chk_notify):
+			widget.config(selectcolor=theme["card"])
 
 		self.slider_volume.config(
 			bg=theme["card"],
@@ -284,4 +286,3 @@ if __name__ == "__main__":
 	root.withdraw()
 	app = ModernSettingsWindow(root)
 	app.root.mainloop()
-
