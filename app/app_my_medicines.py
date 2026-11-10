@@ -648,7 +648,62 @@ class MyMedicinesView(ctk.CTkFrame):
         )
 
     def show_medication_history(self):
-        records = self.analytics.get_filtered_history()
+        user_id = self.user.get("userId")
+        if not isinstance(user_id, str) or not user_id:
+            messagebox.showerror("ประวัติการกินยา", "ไม่พบรหัสผู้ใช้")
+            return
+
+        query = urlencode({"user_id": user_id})
+        try:
+            log_records = self.api_request(
+                f"/user/med/log?{query}", method="GET"
+            )
+        except APIRequestError as error:
+            messagebox.showerror("ประวัติการกินยา", str(error), parent=self)
+            return
+        if not isinstance(log_records, list) or any(
+            not isinstance(record, dict) for record in log_records
+        ):
+            messagebox.showerror(
+                "ประวัติการกินยา",
+                "รูปแบบข้อมูลประวัติจาก API ไม่ถูกต้อง",
+                parent=self,
+            )
+            return
+
+        records = []
+        for record in log_records:
+            med_name = record.get("medName")
+            record_date = record.get("date")
+            status = record.get("status")
+            if (
+                not isinstance(med_name, str)
+                or not isinstance(record_date, str)
+                or status not in ("taken", "not_taken")
+            ):
+                messagebox.showerror(
+                    "ประวัติการกินยา",
+                    "พบข้อมูลประวัติที่ไม่สมบูรณ์",
+                    parent=self,
+                )
+                return
+            try:
+                parsed_date = datetime.strptime(record_date, "%Y-%m-%d")
+            except ValueError:
+                messagebox.showerror(
+                    "ประวัติการกินยา",
+                    "วันที่ในข้อมูลประวัติไม่ถูกต้อง",
+                    parent=self,
+                )
+                return
+            records.append(
+                {
+                    "date": parsed_date,
+                    "med_name": med_name,
+                    "status": "on-time" if status == "taken" else "missed",
+                }
+            )
+
         figure = self.analytics.create_medication_timeline_figure(
             records, dark_mode=ctk.get_appearance_mode() == "Dark"
         )

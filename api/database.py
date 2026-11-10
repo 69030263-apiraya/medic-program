@@ -44,8 +44,8 @@ def get_user_medicines_collection() -> Collection:
     return get_database("mymed")["user_medicine"]
 
 
-def get_medication_logs_collection() -> Collection:
-    return get_database("mymed")["medication_logs"]
+def get_user_medic_logs_collection() -> Collection:
+    return get_database("mymed")["user_medic_log"]
 
 
 def get_auth_database() -> Database:

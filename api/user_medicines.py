@@ -1,11 +1,12 @@
 import math
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, request
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
 from .database import (
-    get_medication_logs_collection,
+    get_medicines_collection,
+    get_user_medic_logs_collection,
     get_user_medicines_collection,
 )
 from .request_helpers import get_json_payload
@@ -222,7 +223,21 @@ def record_medication_status():
         if scheduled_meds != set(med_ids):
             return jsonify({"error": "scheduled_medicine_not_found"}), 404
 
-        logs = get_medication_logs_collection()
+        medicine_documents = get_medicines_collection().find(
+            {
+                "$or": [
+                    {"_id": {"$in": med_ids}},
+                    {"medId": {"$in": med_ids}},
+                ]
+            },
+            {"_id": 1, "medId": 1, "medName": 1},
+        )
+        medicine_names = {
+            str(document.get("medId") or document["_id"]): document["medName"]
+            for document in medicine_documents
+        }
+
+        logs = get_user_medic_logs_collection()
         logs.create_index(
             [("userId", 1), ("medId", 1), ("date", 1), ("periodId", 1)],
             unique=True,
@@ -243,7 +258,13 @@ def record_medication_status():
                     "date": scheduled_date,
                     "periodId": period_id,
                 },
-                {"$set": {"status": status, "recordedAt": recorded_at}},
+                {
+                    "$set": {
+                        "medName": medicine_names.get(med_id, med_id),
+                        "status": status,
+                        "recordedAt": recorded_at,
+                    }
+                },
                 upsert=True,
             )
         return jsonify(
@@ -260,4 +281,80 @@ def record_medication_status():
         return jsonify({"error": "database_not_configured"}), 503
     except PyMongoError:
         current_app.logger.error("MongoDB request failed while recording medication status.")
+        return jsonify({"error": "database_unavailable"}), 503
+
+
+@user_medicines.get("/user/med/log")
+def list_medication_logs():
+    user_id = request.args.get("user_id")
+    if not isinstance(user_id, str) or not user_id.strip():
+        return jsonify({"error": "user_id_is_required"}), 400
+
+    try:
+        documents = list(
+            get_user_medic_logs_collection().find(
+                {"userId": user_id.strip()},
+                {
+                    "_id": 0,
+                    "medId": 1,
+                    "medName": 1,
+                    "med_name": 1,
+                    "date": 1,
+                    "status": 1,
+                    "periodId": 1,
+                },
+            ).sort([("date", -1), ("periodId", -1)])
+        )
+        missing_med_ids = {
+            document["medId"]
+            for document in documents
+            if isinstance(document.get("medId"), str)
+            and not isinstance(
+                document.get("medName") or document.get("med_name"), str
+            )
+        }
+        medicine_names = {}
+        if missing_med_ids:
+            medicine_documents = get_medicines_collection().find(
+                {
+                    "$or": [
+                        {"_id": {"$in": list(missing_med_ids)}},
+                        {"medId": {"$in": list(missing_med_ids)}},
+                    ]
+                },
+                {"_id": 1, "medId": 1, "medName": 1},
+            )
+            medicine_names = {
+                str(document.get("medId") or document["_id"]): document["medName"]
+                for document in medicine_documents
+            }
+
+        records = []
+        for document in documents:
+            med_id = document.get("medId")
+            med_name = document.get("medName") or document.get("med_name")
+            if not isinstance(med_name, str):
+                med_name = medicine_names.get(med_id, "ไม่พบข้อมูลยา")
+            raw_date = document.get("date")
+            if isinstance(raw_date, datetime):
+                record_date = raw_date.date().isoformat()
+            elif isinstance(raw_date, date):
+                record_date = raw_date.isoformat()
+            else:
+                record_date = raw_date
+
+            records.append(
+                {
+                    "medName": med_name,
+                    "date": record_date,
+                    "status": document.get("status"),
+                    "periodId": document.get("periodId"),
+                }
+            )
+        return jsonify(records)
+    except RuntimeError:
+        current_app.logger.error("MONGODB_URI is not configured.")
+        return jsonify({"error": "database_not_configured"}), 503
+    except PyMongoError:
+        current_app.logger.error("MongoDB request failed while listing medication logs.")
         return jsonify({"error": "database_unavailable"}), 503

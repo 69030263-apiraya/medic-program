@@ -143,10 +143,12 @@ an array of unique values from `1` to `4` (morning, midday, evening, and
 bedtime); an empty array means take as needed when symptoms occur. `foodRequire`
 must be `"before"`, `"after"`, or `null`. Duplicate user/medicine pairs return
 `409`. `DELETE /user/med` accepts `userId` and `medId` in the JSON body.
-`POST /user/med/log` records a reminder result for one or more medicines in a
-scheduled period. It accepts `userId`, `medIds`, `periodId` (`1`-`4`), `date`
-(`YYYY-MM-DD`), and `status` (`"taken"` or `"not_taken"`); repeated submissions
-for the same medicine, date, and period update the existing result.
+`POST /user/med/log` records a reminder result for one or more medicines in the
+`mymed.user_medic_log` collection. It accepts `userId`, `medIds`,
+`periodId` (`1`-`4`), `date` (`YYYY-MM-DD`), and `status` (`"taken"` or
+`"not_taken"`); repeated submissions for the same medicine, date, and period
+update the existing result. `GET /user/med/log?user_id=<userId>` returns the
+saved records used by the desktop medication history.
 
 | Method | Path | Status |
 | --- | --- | --- |
@@ -164,4 +166,5 @@ for the same medicine, date, and period update the existing result.
 | `POST` | `/user/med` | Implemented |
 | `DELETE` | `/user/med` | Implemented |
 | `POST` | `/user/med/log` | Implemented |
+| `GET` | `/user/med/log` | Implemented |
 >>>>>>> main
