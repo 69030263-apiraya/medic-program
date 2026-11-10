@@ -33,7 +33,8 @@ running. Each reminder offers **กินแล้ว** and **ไม่กิน
 the selected result for all medicines in that time period. The page shows a
 fixed four-period dose summary, the full daily medicine list with removal
 controls, and the add-medicine form. Use **ทดสอบการแจ้งเตือน** to check the
-configured times and next reminder.
+configured times; its **กินแล้ว** and **ไม่กิน** actions record the result for
+medicines in the current period.
 
 Create a `.env` file in the project root and set `MONGODB_URI` there:
 

@@ -43,6 +43,27 @@ def _register_notification_action(token, status):
     return callback
 
 
+def _reminder_actions(user_id, medicines, period_id, scheduled_at):
+    token = uuid.uuid4().hex
+    actions_directory = _actions_directory()
+    actions_directory.mkdir(parents=True, exist_ok=True)
+    (actions_directory / f"{token}.json").write_text(
+        json.dumps(
+            {
+                "userId": user_id,
+                "medIds": [medicine["medId"] for medicine in medicines],
+                "periodId": period_id,
+                "date": scheduled_at.date().isoformat(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return (
+        ("กินแล้ว", _register_notification_action(token, "taken")),
+        ("ไม่กิน", _register_notification_action(token, "not_taken")),
+    )
+
+
 def _process_notification_action(token, status):
     action_file = _actions_directory() / f"{token}.json"
     processing_file = _actions_directory() / f"{token}.processing"
@@ -144,6 +165,17 @@ def next_scheduled_time(period_ids, now=None):
     return min(candidates) if candidates else None
 
 
+def current_period_id(now=None):
+    now = now or datetime.now()
+    if now.hour < 8 or now.hour >= 20:
+        return 4
+    if now.hour < 12:
+        return 1
+    if now.hour < 16:
+        return 2
+    return 3
+
+
 class MedicineReminder:
     def __init__(self):
         self._stop_event = threading.Event()
@@ -196,19 +228,36 @@ class MedicineReminder:
     def test_notification(self):
         with self._lock:
             schedule = {
-                period_id: [
-                    medicine["description"] for medicine in medicines
-                ]
+                period_id: list(medicines)
                 for period_id, medicines in self._schedule.items()
             }
+            user_id = self._user_id
         period_ids = sorted(schedule)
         if not period_ids:
             raise ValueError("ยังไม่มีช่วงเวลาที่ตั้งแจ้งเตือน")
+        if not isinstance(user_id, str):
+            raise ValueError("ไม่พบผู้ใช้สำหรับบันทึกผลการแจ้งเตือน")
+
+        now = datetime.now()
+        period_id = current_period_id(now)
+        medicines = schedule.get(period_id, [])
+        if not medicines:
+            raise ValueError(
+                f"ไม่มีรายการยาในรอบปัจจุบัน "
+                f"({PERIOD_TIMES[period_id][1]})"
+            )
 
         times = ", ".join(PERIOD_TIMES[period_id][1] for period_id in period_ids)
-        upcoming = next_scheduled_time(period_ids)
-        message = f"เวลาที่ตั้งไว้: {times}\nรอบถัดไป: {upcoming:%H:%M}"
-        show_notification("ทดสอบการแจ้งเตือนยา", message)
+        actions = _reminder_actions(user_id, medicines, period_id, now)
+        medicine_list = "\n".join(
+            medicine["description"] for medicine in medicines
+        )
+        message = (
+            f"เวลาที่ตั้งไว้: {times}\n"
+            f"รอบปัจจุบัน: {PERIOD_TIMES[period_id][1]}\n"
+            f"ผลจะบันทึกสำหรับยา:\n{medicine_list}"
+        )
+        show_notification("ทดสอบการแจ้งเตือนยา", message, actions)
 
     def stop(self):
         self._stop_event.set()
@@ -232,23 +281,8 @@ class MedicineReminder:
                 self._last_notified = notification_key
 
             try:
-                token = uuid.uuid4().hex
-                actions_directory = _actions_directory()
-                actions_directory.mkdir(parents=True, exist_ok=True)
-                (actions_directory / f"{token}.json").write_text(
-                    json.dumps(
-                        {
-                            "userId": user_id,
-                            "medIds": [medicine["medId"] for medicine in medicines],
-                            "periodId": period_id,
-                            "date": now.date().isoformat(),
-                        }
-                    ),
-                    encoding="utf-8",
-                )
-                actions = (
-                    ("กินแล้ว", _register_notification_action(token, "taken")),
-                    ("ไม่กิน", _register_notification_action(token, "not_taken")),
+                actions = _reminder_actions(
+                    user_id, medicines, period_id, now
                 )
             except OSError:
                 logger.exception(
