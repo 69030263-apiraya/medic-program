@@ -120,7 +120,7 @@ def start_notification_actions():
             if windowless_python.is_file():
                 executable_path = windowless_python
         executable = f'"{executable_path}"'
-        script_path = "-m app.notification_action"
+        script_path = f'"{Path(__file__).with_name("notification_action.py").resolve()}"'
 
     registry = Registry(
         APP_ID,

@@ -1,6 +1,11 @@
+from pathlib import Path
 import sys
 
-from .notifications import process_notification_action_argument
+project_root = Path(__file__).resolve().parents[1]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from app.notifications import process_notification_action_argument
 
 
 def main():
