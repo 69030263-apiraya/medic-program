@@ -1,9 +1,13 @@
 import math
+from datetime import datetime, timezone
 
 from flask import Blueprint, current_app, jsonify, request
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
-from .database import get_user_medicines_collection
+from .database import (
+    get_medication_logs_collection,
+    get_user_medicines_collection,
+)
 from .request_helpers import get_json_payload
 
 user_medicines = Blueprint("user_medicines", __name__)
@@ -160,4 +164,100 @@ def delete_user_medicine():
         return jsonify({"error": "database_not_configured"}), 503
     except PyMongoError:
         current_app.logger.error("MongoDB request failed while deleting a user medicine.")
+        return jsonify({"error": "database_unavailable"}), 503
+
+
+@user_medicines.post("/user/med/log")
+def record_medication_status():
+    payload, error_response = get_json_payload()
+    if error_response:
+        return error_response
+
+    user_id = payload.get("userId")
+    med_ids = payload.get("medIds")
+    period_id = payload.get("periodId")
+    status = payload.get("status")
+    scheduled_date = payload.get("date")
+
+    if not isinstance(user_id, str) or not user_id.strip():
+        return jsonify({"error": "userId_is_required"}), 400
+    if not isinstance(med_ids, list) or not med_ids or any(
+        not isinstance(med_id, str) or not med_id.strip() for med_id in med_ids
+    ):
+        return jsonify({"error": "invalid_medIds"}), 400
+    med_ids = [med_id.strip() for med_id in med_ids]
+    if len(med_ids) != len(set(med_ids)):
+        return jsonify({"error": "invalid_medIds"}), 400
+    if (
+        not isinstance(period_id, int)
+        or isinstance(period_id, bool)
+        or period_id not in (1, 2, 3, 4)
+    ):
+        return jsonify({"error": "invalid_periodId"}), 400
+    if status not in ("taken", "not_taken"):
+        return jsonify({"error": "invalid_log_status"}), 400
+    if not isinstance(scheduled_date, str):
+        return jsonify({"error": "invalid_log_date"}), 400
+    try:
+        date_value = datetime.strptime(scheduled_date, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "invalid_log_date"}), 400
+    if date_value.isoformat() != scheduled_date:
+        return jsonify({"error": "invalid_log_date"}), 400
+
+    user_id = user_id.strip()
+    try:
+        user_meds = get_user_medicines_collection()
+        scheduled_meds = {
+            document["medId"]
+            for document in user_meds.find(
+                {
+                    "userId": user_id,
+                    "medId": {"$in": med_ids},
+                    "timesPerDay": period_id,
+                },
+                {"_id": 0, "medId": 1},
+            )
+        }
+        if scheduled_meds != set(med_ids):
+            return jsonify({"error": "scheduled_medicine_not_found"}), 404
+
+        logs = get_medication_logs_collection()
+        logs.create_index(
+            [("userId", 1), ("medId", 1), ("date", 1), ("periodId", 1)],
+            unique=True,
+            partialFilterExpression={
+                "userId": {"$type": "string"},
+                "medId": {"$type": "string"},
+                "date": {"$type": "string"},
+                "periodId": {"$type": "int"},
+            },
+            name="user_medication_period_unique",
+        )
+        recorded_at = datetime.now(timezone.utc)
+        for med_id in med_ids:
+            logs.update_one(
+                {
+                    "userId": user_id,
+                    "medId": med_id,
+                    "date": scheduled_date,
+                    "periodId": period_id,
+                },
+                {"$set": {"status": status, "recordedAt": recorded_at}},
+                upsert=True,
+            )
+        return jsonify(
+            {
+                "message": "successful",
+                "date": scheduled_date,
+                "periodId": period_id,
+                "status": status,
+                "medIds": med_ids,
+            }
+        )
+    except RuntimeError:
+        current_app.logger.error("MONGODB_URI is not configured.")
+        return jsonify({"error": "database_not_configured"}), 503
+    except PyMongoError:
+        current_app.logger.error("MongoDB request failed while recording medication status.")
         return jsonify({"error": "database_unavailable"}), 503

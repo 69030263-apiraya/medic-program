@@ -29,9 +29,11 @@ where they can add and delete medicines and medicine types using `/med` and
 `/med/type`.
 On Windows, the user medicine screen sends audible native notifications at
 08:00, 12:00, 16:00, and 20:00 for selected medicine periods while the app is
-running. The page shows a fixed four-period dose summary, the full daily
-medicine list with removal controls, and the add-medicine form. Use
-**ทดสอบการแจ้งเตือน** to check the configured times and next reminder.
+running. Each reminder offers **กินแล้ว** and **ไม่กิน** actions that record
+the selected result for all medicines in that time period. The page shows a
+fixed four-period dose summary, the full daily medicine list with removal
+controls, and the add-medicine form. Use **ทดสอบการแจ้งเตือน** to check the
+configured times and next reminder.
 
 Create a `.env` file in the project root and set `MONGODB_URI` there:
 
@@ -141,6 +143,10 @@ an array of unique values from `1` to `4` (morning, midday, evening, and
 bedtime); an empty array means take as needed when symptoms occur. `foodRequire`
 must be `"before"`, `"after"`, or `null`. Duplicate user/medicine pairs return
 `409`. `DELETE /user/med` accepts `userId` and `medId` in the JSON body.
+`POST /user/med/log` records a reminder result for one or more medicines in a
+scheduled period. It accepts `userId`, `medIds`, `periodId` (`1`-`4`), `date`
+(`YYYY-MM-DD`), and `status` (`"taken"` or `"not_taken"`); repeated submissions
+for the same medicine, date, and period update the existing result.
 
 | Method | Path | Status |
 | --- | --- | --- |
@@ -157,4 +163,5 @@ must be `"before"`, `"after"`, or `null`. Duplicate user/medicine pairs return
 | `GET` | `/user/med` | Implemented |
 | `POST` | `/user/med` | Implemented |
 | `DELETE` | `/user/med` | Implemented |
+| `POST` | `/user/med/log` | Implemented |
 >>>>>>> main

@@ -498,7 +498,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.medicine_types = types
         self.catalog_medicines = medicines
         self.user_medicines = user_medicines
-        self.reminder.update(user_medicines, medicines)
+        self.reminder.update(self.user.get("userId"), user_medicines, medicines)
         self.type_ids_by_name = {
             item["medTypeName"]: item["medTypeId"]
             for item in types

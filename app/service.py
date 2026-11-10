@@ -5,6 +5,7 @@ from .app_admin import AdminView
 from .app_auth import AuthView
 from .app_me import ProfileView
 from .app_my_medicines import MyMedicinesView
+from .notifications import start_notification_actions
 from .settings import load_saved_theme
 from .theme import COLORS
 
@@ -66,6 +67,8 @@ def main():
         "Dark" if load_saved_theme() == "dark" else "Light"
     )
     ctk.set_default_color_theme("blue")
+    if start_notification_actions():
+        return
     AppService().mainloop()
 
 

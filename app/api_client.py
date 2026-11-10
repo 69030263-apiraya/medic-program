@@ -35,6 +35,11 @@ ERROR_MESSAGES = {
     "invalid_value": "จำนวนยาต้องมากกว่า 0",
     "user_medicine_already_exists": "ยานี้อยู่ในรายการของคุณแล้ว",
     "user_medicine_not_found": "ไม่พบรายการยาของคุณ",
+    "invalid_medIds": "ข้อมูลรายการยาที่ต้องบันทึกไม่ถูกต้อง",
+    "invalid_periodId": "ช่วงเวลาที่ต้องบันทึกไม่ถูกต้อง",
+    "invalid_log_status": "สถานะการกินยาไม่ถูกต้อง",
+    "invalid_log_date": "วันที่บันทึกไม่ถูกต้อง",
+    "scheduled_medicine_not_found": "ไม่พบยาที่ตั้งไว้ในช่วงเวลานี้",
 }
 
 
