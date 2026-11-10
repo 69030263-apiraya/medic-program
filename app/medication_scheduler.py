@@ -65,8 +65,13 @@ class MedicationSchedulerApp:
 
         # เริ่มทำงาน Background Thread
         self.is_running = True
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.checker_thread = threading.Thread(target=self.check_time_loop, daemon=True)
         self.checker_thread.start()
+
+    def close(self):
+        self.is_running = False
+        self.root.destroy()
 
     def setup_ui(self):
         """หน้าตั้งตารางเวลา (Schedule Setup)"""

@@ -1,5 +1,6 @@
 import math
 import threading
+import tkinter as tk
 from tkinter import messagebox
 from urllib.parse import urlencode
 
@@ -10,6 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from modules.analytics import AnalyticsModule
 
 from .api_client import APIRequestError
+from .medication_scheduler import MedicationSchedulerApp
 from .notifications import MedicineReminder
 from .settings import ModernSettingsWindow
 from .theme import COLORS
@@ -52,6 +54,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.error_after_id = None
         self.reminder = MedicineReminder()
         self.analytics = AnalyticsModule()
+        self.scheduler_app = None
 
         header = ctk.CTkFrame(
             self, fg_color=COLORS["teal"], corner_radius=0, height=72
@@ -84,7 +87,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.busy_buttons.append(self.logout_button)
         self.history_button = ctk.CTkButton(
             header,
-            text="◷",
+            text="▥",
             width=42,
             height=40,
             font=("Segoe UI Symbol", 20),
@@ -94,6 +97,18 @@ class MyMedicinesView(ctk.CTkFrame):
             command=self.show_medication_history,
         )
         self.history_button.pack(side="right", padx=(0, 8))
+        self.scheduler_button = ctk.CTkButton(
+            header,
+            text="◷",
+            width=42,
+            height=40,
+            font=("Segoe UI Symbol", 20),
+            fg_color=COLORS["surface"],
+            text_color=COLORS["teal_text"],
+            hover_color=COLORS["teal_light"],
+            command=self.show_schedule_settings,
+        )
+        self.scheduler_button.pack(side="right", padx=(0, 8))
         self.settings_button = ctk.CTkButton(
             header,
             text="⚙",
@@ -653,6 +668,15 @@ class MyMedicinesView(ctk.CTkFrame):
     def show_settings(self):
         ModernSettingsWindow(self, on_theme_change=self.on_theme_change)
 
+    def show_schedule_settings(self):
+        if self.scheduler_app is not None and self.scheduler_app.root.winfo_exists():
+            self.scheduler_app.root.lift()
+            return
+
+        self.scheduler_app = MedicationSchedulerApp(tk.Toplevel(self))
+
     def destroy(self):
         self.reminder.stop()
+        if self.scheduler_app is not None and self.scheduler_app.root.winfo_exists():
+            self.scheduler_app.close()
         super().destroy()
