@@ -1,11 +1,10 @@
 import os
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
 
 from waitress import create_server
-
-from api.service import app as api_app
 
 
 API_HOST = "127.0.0.1"
@@ -14,8 +13,26 @@ API_PORT = 5010
 
 def main():
     os.environ["MEDIC_API_URL"] = f"http://{API_HOST}:{API_PORT}"
+    from app.notifications import (
+        is_notification_action_argument,
+        process_notification_action_argument,
+    )
+
+    action_argument = next(
+        (
+            argument
+            for argument in sys.argv[1:]
+            if is_notification_action_argument(argument)
+        ),
+        None,
+    )
+    if action_argument is not None:
+        process_notification_action_argument(action_argument)
+        return
 
     try:
+        from api.service import app as api_app
+
         server = create_server(api_app, host=API_HOST, port=API_PORT)
     except OSError as error:
         root = tk.Tk()

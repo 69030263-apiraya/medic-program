@@ -8,14 +8,14 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from winotify import Notification, Notifier, Registry, audio
+from winotify import Notification, Registry, audio
 
 from .api_client import APIRequestError, api_request
 
 logger = logging.getLogger(__name__)
 APP_ID = "Medic Program"
+APP_PROTOCOL = APP_ID.replace(" ", "-")
 ACTION_NAME = re.compile(r"^(taken|not_taken)_([0-9a-f]{32})$")
-_action_notifier = None
 
 PERIOD_TIMES = {
     1: (8, "08:00"),
@@ -29,18 +29,6 @@ def _actions_directory():
     local_app_data = os.environ.get("LOCALAPPDATA")
     base = Path(local_app_data) if local_app_data else Path.home() / "AppData" / "Local"
     return base / "MedicProgram" / "notification_actions"
-
-
-def _register_notification_action(token, status):
-    callback_name = f"{status}_{token}"
-
-    def callback():
-        _process_notification_action(token, status)
-
-    callback.__name__ = callback_name
-    callback.__qualname__ = callback_name
-    _action_notifier.register_callback(callback)
-    return callback
 
 
 def _reminder_actions(user_id, medicines, period_id, scheduled_at):
@@ -58,9 +46,10 @@ def _reminder_actions(user_id, medicines, period_id, scheduled_at):
         ),
         encoding="utf-8",
     )
+    action_prefix = f"{APP_PROTOCOL}:"
     return (
-        ("กินแล้ว", _register_notification_action(token, "taken")),
-        ("ไม่กิน", _register_notification_action(token, "not_taken")),
+        ("กินแล้ว", f"{action_prefix}taken_{token}"),
+        ("ไม่กิน", f"{action_prefix}not_taken_{token}"),
     )
 
 
@@ -109,32 +98,55 @@ def _process_notification_action(token, status):
 
 
 def start_notification_actions():
-    global _action_notifier
-    if _action_notifier is not None:
-        return False
+    action_argument = next(
+        (
+            argument
+            for argument in sys.argv[1:]
+            if is_notification_action_argument(argument)
+        ),
+        None,
+    )
+    if action_argument is not None:
+        process_notification_action_argument(action_argument)
+        return True
 
     if getattr(sys, "frozen", False):
         executable = f'"{sys.executable}"'
         script_path = ""
     else:
-        executable = f'"{sys.executable}"'
-        main_spec = getattr(sys.modules.get("__main__"), "__spec__", None)
-        if main_spec is not None and main_spec.name:
-            script_path = f"-m {main_spec.name}"
-        else:
-            script_path = f'"{Path(sys.argv[0]).resolve()}"'
+        executable_path = Path(sys.executable)
+        if os.name == "nt":
+            windowless_python = executable_path.with_name("pythonw.exe")
+            if windowless_python.is_file():
+                executable_path = windowless_python
+        executable = f'"{executable_path}"'
+        script_path = "-m app.notification_action"
 
-    registry = Registry(APP_ID, executable=executable, script_path=script_path)
-    _action_notifier = Notifier(registry)
-    cold_action = hasattr(_action_notifier, "func_to_call")
-    if cold_action:
-        match = ACTION_NAME.fullmatch(_action_notifier.func_to_call)
-        if match is None:
-            logger.error("Ignored an invalid medication reminder action.")
-        else:
-            _register_notification_action(match.group(2), match.group(1))
-    _action_notifier.start()
-    return cold_action
+    registry = Registry(
+        APP_ID,
+        executable=executable,
+        script_path=script_path,
+        force_override=True,
+    )
+    return False
+
+
+def is_notification_action_argument(argument):
+    return isinstance(argument, str) and argument.casefold().startswith(
+        f"{APP_PROTOCOL}:".casefold()
+    )
+
+
+def process_notification_action_argument(argument):
+    if not is_notification_action_argument(argument):
+        return False
+    action_name = argument.partition(":")[2]
+    match = ACTION_NAME.fullmatch(action_name)
+    if match is None:
+        logger.error("Ignored an invalid medication reminder action.")
+        return False
+    _process_notification_action(match.group(2), match.group(1))
+    return True
 
 
 def show_notification(title, message, actions=()):

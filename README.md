@@ -14,12 +14,22 @@ The service listens on `http://127.0.0.1:5010` by default.
 
 ### Desktop app
 
-Install the project dependencies, start the API as described above, then launch
-the Tkinter desktop app from the project root:
+Install the project dependencies. In one terminal, start the API from the
+project root:
+
+```powershell
+python -m api.service
+```
+
+In a second terminal, launch the Tkinter desktop app from the project root:
 
 ```powershell
 python -m app.service
 ```
+
+Keep both processes running while using the app. The desktop app creates the
+reminders, and the API process stores their results when a notification button
+is clicked.
 
 The app supports signup and login, then shows the `userId`, `userName`, and
 `userRole` returned by the API. Set `MEDIC_API_URL` if the API is hosted at a
