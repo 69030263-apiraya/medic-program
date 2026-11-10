@@ -48,6 +48,7 @@ class MyMedicinesView(ctk.CTkFrame):
         self.medicine_types = []
         self.catalog_medicines = []
         self.user_medicines = []
+        self.scheduler_medicines = []
         self.medicines_by_label = {}
         self.type_ids_by_name = {}
         self.busy_buttons = []
@@ -499,6 +500,25 @@ class MyMedicinesView(ctk.CTkFrame):
         self.medicine_types = types
         self.catalog_medicines = medicines
         self.user_medicines = user_medicines
+        medicines_by_id = {
+            medicine.get("medId"): medicine
+            for medicine in medicines
+            if isinstance(medicine.get("medId"), str)
+        }
+        self.scheduler_medicines = []
+        for user_medicine in user_medicines:
+            med_id = user_medicine.get("medId")
+            medicine = medicines_by_id.get(med_id)
+            if (
+                isinstance(med_id, str)
+                and medicine is not None
+                and isinstance(medicine.get("medName"), str)
+            ):
+                self.scheduler_medicines.append(
+                    {"medId": med_id, "medName": medicine["medName"]}
+                )
+        if self.scheduler_app is not None and self.scheduler_app.root.winfo_exists():
+            self.scheduler_app.update_medicines(self.scheduler_medicines)
         self.reminder.update(self.user.get("userId"), user_medicines, medicines)
         self.type_ids_by_name = {
             item["medTypeName"]: item["medTypeId"]
@@ -729,7 +749,17 @@ class MyMedicinesView(ctk.CTkFrame):
             self.scheduler_app.root.lift()
             return
 
-        self.scheduler_app = MedicationSchedulerApp(tk.Toplevel(self))
+        user_id = self.user.get("userId")
+        if not isinstance(user_id, str) or not user_id:
+            messagebox.showerror(
+                "ตั้งเวลาเตือน",
+                "ไม่พบรหัสผู้ใช้สำหรับโหลดตารางเตือน",
+                parent=self,
+            )
+            return
+        self.scheduler_app = MedicationSchedulerApp(
+            tk.Toplevel(self), user_id, self.scheduler_medicines
+        )
 
     def destroy(self):
         self.reminder.stop()

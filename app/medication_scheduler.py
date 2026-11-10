@@ -1,35 +1,44 @@
 import datetime
+import json
+import os
 import threading
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-# Import pymongo สำหรับจัดการ MongoDB (ถ้าต้องการเชื่อมต่อ DB จริง)
-try:
-    from pymongo import MongoClient
+from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 
-    # เปลี่ยน URL การเชื่อมต่อตามต้องการ
-    client = MongoClient("mongodb://localhost:27017/")
-    db = client["pharmacy_db"]
-    medications_col = db["medications"]
-    logs_col = db["logs"]
-except Exception as e:
-    print(f" Warning: ไม่สามารถเชื่อมต่อ MongoDB ได้ (ใช้งานโหมดจำลอง): {e}")
-    medications_col = None
-    logs_col = None
+client = MongoClient("mongodb://localhost:27017/")
+logs_col = client["pharmacy_db"]["logs"]
 
 # จำลองฟังก์ชันตัดสต็อกของคนที่ 1
 def delete_one_stock(med_name):
     print(f"[คนที่ 1 Integration] ตัดสต็อกยา: {med_name} เรียบร้อยแล้ว")
 
+
+def _get_schedule_storage_path():
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if not local_app_data:
+        local_app_data = os.path.join(
+            os.path.expanduser("~"), "AppData", "Local"
+        )
+    return os.path.join(
+        local_app_data, "MedicProgram", "medication_schedules.json"
+    )
+
+
 class MedicationSchedulerApp:
-    def __init__(self, root):
+    def __init__(self, root, user_id="local", medicines=None):
         self.root = root
+        self.user_id = user_id
         self.root.title("ระบบตั้งตารางเวลาเตือนกินยา (Scheduler & Notification Module)")
         self.root.geometry("500x400")
 
-        # รายการตารางเวลาเตือนกินยาในหน่วยความจำ
-        self.schedules = []
+        self.storage_path = _get_schedule_storage_path()
+        self.schedules = self._load_schedules()
+        self.medicines_by_label = {}
+        self.medicines = medicines or []
         self.triggered_times = set()
 
         # --- 1. ตั้งค่าสไตล์สีสันทั้งหมดไว้ตรงนี้ ---
@@ -62,6 +71,7 @@ class MedicationSchedulerApp:
 
         # --- 2. เรียกสร้าง UI ---
         self.setup_ui()
+        self.update_medicines(self.medicines)
 
         # เริ่มทำงาน Background Thread
         self.is_running = True
@@ -88,10 +98,8 @@ class MedicationSchedulerApp:
 
         # 1. เลือกยาจากคลัง
         ttk.Label(frame, text="เลือกยาจากคลัง:").grid(row=0, column=0, sticky="w", pady=5)
-        self.med_combobox = ttk.Combobox(frame, values=["Paracetamol", "Aspirin", "Amoxicillin"], state="readonly")
+        self.med_combobox = ttk.Combobox(frame, values=[], state="readonly")
         self.med_combobox.grid(row=0, column=1, sticky="ew", pady=5)
-        if self.med_combobox['values']:
-            self.med_combobox.current(0)
 
         # 2. กำหนดเวลาเตือน
         ttk.Label(frame, text="กำหนดเวลาเตือน (HH:MM):").grid(row=1, column=0, sticky="w", pady=5)
@@ -122,26 +130,142 @@ class MedicationSchedulerApp:
         self.tree.column("time", stretch=True)
         
         self.tree.grid(row=3, column=0, columnspan=2, sticky="nsew", pady=5)
-    
-    
-    
-    
+
+        for item in self.schedules:
+            self.tree.insert(
+                "", "end", values=(item["med_name"], item["remind_time"])
+            )
+
+    def update_medicines(self, medicines):
+        self.medicines = medicines
+        selected_id = None
+        selected = self.medicines_by_label.get(self.med_combobox.get())
+        if selected:
+            selected_id = selected.get("medId")
+
+        self.medicines_by_label = {}
+        for medicine in medicines:
+            med_id = medicine.get("medId")
+            med_name = medicine.get("medName")
+            if not isinstance(med_id, str) or not isinstance(med_name, str):
+                continue
+            label = med_name
+            if label in self.medicines_by_label:
+                label = f"{med_name} · {med_id[:8]}"
+            self.medicines_by_label[label] = medicine
+
+        labels = list(self.medicines_by_label)
+        self.med_combobox.configure(values=labels)
+        self.med_combobox.configure(state="readonly" if labels else "disabled")
+        selected_label = next(
+            (
+                label
+                for label, medicine in self.medicines_by_label.items()
+                if medicine.get("medId") == selected_id
+            ),
+            labels[0] if labels else "",
+        )
+        self.med_combobox.set(selected_label)
+
+    def _load_schedules(self):
+        if not os.path.exists(self.storage_path):
+            return []
+        try:
+            with open(self.storage_path, "r", encoding="utf-8") as schedule_file:
+                saved_schedules = json.load(schedule_file)
+        except (OSError, ValueError, TypeError) as error:
+            messagebox.showerror(
+                "โหลดตารางเตือนไม่สำเร็จ",
+                f"ไม่สามารถอ่านตารางเตือนจากเครื่องได้: {error}",
+                parent=self.root,
+            )
+            return []
+        if not isinstance(saved_schedules, dict):
+            messagebox.showerror(
+                "โหลดตารางเตือนไม่สำเร็จ",
+                "รูปแบบข้อมูลตารางเตือนในเครื่องไม่ถูกต้อง",
+                parent=self.root,
+            )
+            return []
+        schedules = saved_schedules.get(self.user_id, [])
+        if not isinstance(schedules, list) or any(
+            not isinstance(item, dict)
+            or not isinstance(item.get("med_name"), str)
+            or not isinstance(item.get("remind_time"), str)
+            for item in schedules
+        ):
+            messagebox.showerror(
+                "โหลดตารางเตือนไม่สำเร็จ",
+                "รูปแบบข้อมูลตารางเตือนของผู้ใช้นี้ไม่ถูกต้อง",
+                parent=self.root,
+            )
+            return []
+        return schedules
+
+    def _save_schedules(self, schedules):
+        saved_schedules = {}
+        if os.path.exists(self.storage_path):
+            try:
+                with open(self.storage_path, "r", encoding="utf-8") as schedule_file:
+                    saved_schedules = json.load(schedule_file)
+            except (OSError, ValueError, TypeError) as error:
+                messagebox.showerror(
+                    "บันทึกตารางเตือนไม่สำเร็จ",
+                    f"ไม่สามารถอ่านข้อมูลเดิมในเครื่องได้: {error}",
+                    parent=self.root,
+                )
+                return False
+            if not isinstance(saved_schedules, dict):
+                messagebox.showerror(
+                    "บันทึกตารางเตือนไม่สำเร็จ",
+                    "รูปแบบข้อมูลตารางเตือนในเครื่องไม่ถูกต้อง",
+                    parent=self.root,
+                )
+                return False
+
+        saved_schedules[self.user_id] = schedules
+        try:
+            os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
+            with open(self.storage_path, "w", encoding="utf-8") as schedule_file:
+                json.dump(
+                    saved_schedules,
+                    schedule_file,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+        except (OSError, TypeError, ValueError) as error:
+            messagebox.showerror(
+                "บันทึกตารางเตือนไม่สำเร็จ",
+                f"ไม่สามารถบันทึกตารางเตือนลงเครื่องได้: {error}",
+                parent=self.root,
+            )
+            return False
+        return True
+
     def add_schedule(self):
-        med_name = self.med_combobox.get()
+        medicine = self.medicines_by_label.get(self.med_combobox.get())
+        if medicine is None:
+            messagebox.showerror(
+                "เพิ่มตารางเวลาเตือน",
+                "กรุณาเลือกยาจากรายการยาปัจจุบันของคุณ",
+                parent=self.root,
+            )
+            return
+        med_name = medicine["medName"]
         hh = self.hour_spin.get().zfill(2)
         mm = self.minute_spin.get().zfill(2)
         remind_time = f"{hh}:{mm}"
 
-        schedule_item = {"med_name": med_name, "remind_time": remind_time, "date": datetime.date.today().strftime("%Y-%m-%d")}
-        self.schedules.append(schedule_item)
+        schedule_item = {
+            "med_id": medicine["medId"],
+            "med_name": med_name,
+            "remind_time": remind_time,
+        }
+        updated_schedules = self.schedules + [schedule_item]
+        if not self._save_schedules(updated_schedules):
+            return
+        self.schedules = updated_schedules
         self.tree.insert("", "end", values=(med_name, remind_time))
-
-        # insert_one() เพิ่มข้อมูลลง MongoDB (คลัง medications)
-        if medications_col is not None:
-            try:
-                medications_col.insert_one(schedule_item)
-            except Exception as e:
-                print(f"MongoDB Error: {e}")
 
         messagebox.showinfo("สำเร็จ", f"ตั้งเวลาเตือน {med_name} ตอน {remind_time} น. เรียบร้อยแล้ว")
 
@@ -152,14 +276,7 @@ class MedicationSchedulerApp:
             current_time_str = now.strftime("%H:%M")
             current_second = now.second
 
-            # ดึงข้อมูลตารางเวลาของวันปัจจุบัน (ใช้ find ใน MongoDB ถ้ามี)
             active_schedules = self.schedules
-            if medications_col is not None:
-                try:
-                    today_str = datetime.date.today().strftime("%Y-%m-%d")
-                    active_schedules = list(medications_col.find({"date": today_str}))
-                except Exception as e:
-                    pass
 
             # ตรวจสอบว่าตรงกับเวลาเตือนหรือไม่ (เช็คที่วินาที 00)
             if current_second == 0:
@@ -168,11 +285,17 @@ class MedicationSchedulerApp:
                     if item['remind_time'] == current_time_str and trigger_key not in self.triggered_times:
                         self.triggered_times.add(trigger_key)
                         # เรียก Pop-up Notification บน Main Thread
-                        self.root.after(0, self.show_notification_popup, item['med_name'], item['remind_time'])
+                        self.root.after(
+                            0,
+                            self.show_notification_popup,
+                            item.get("med_id"),
+                            item["med_name"],
+                            item["remind_time"],
+                        )
 
             time.sleep(1)
 
-    def show_notification_popup(self, med_name, remind_time):
+    def show_notification_popup(self, med_id, med_name, remind_time):
         """หน้าต่างแจ้งเตือน (Pop-up Notification Window) เด้งขึ้นมากลางจอ"""
         popup = tk.Toplevel(self.root)
         popup.title(" แจ้งเตือนกินยา!")
@@ -196,7 +319,6 @@ class MedicationSchedulerApp:
             # สั่งเรียกฟังก์ชันตัดสต็อกของคนแรก
             delete_one_stock(med_name)
             
-            # insert_one() บันทึกประวัติลง Collection logs
             log_data = {
                 "med_name": med_name,
                 "status": "Taken",
@@ -205,8 +327,8 @@ class MedicationSchedulerApp:
             if logs_col is not None:
                 try:
                     logs_col.insert_one(log_data)
-                except Exception as e:
-                    print(f"MongoDB Log Error: {e}")
+                except PyMongoError as error:
+                    print(f"MongoDB Log Error: {error}")
             print(f"[Log Created]: {log_data}")
 
             popup.destroy()
@@ -221,15 +343,23 @@ class MedicationSchedulerApp:
             if logs_col is not None:
                 try:
                     logs_col.insert_one(log_data)
-                except Exception as e:
-                    print(f"MongoDB Log Error: {e}")
+                except PyMongoError as error:
+                    print(f"MongoDB Log Error: {error}")
+            print(f"[Log Created]: {log_data}")
             popup.destroy()
 
         # 3. ปุ่ม [เลื่อน 10 นาที (Snooze)]
         def on_snooze():
             snooze_time = (datetime.datetime.now() + datetime.timedelta(minutes=10)).strftime("%H:%M")
-            snooze_item = {"med_name": med_name, "remind_time": snooze_time, "date": datetime.date.today().strftime("%Y-%m-%d")}
-            self.schedules.append(snooze_item)
+            snooze_item = {
+                "med_id": med_id,
+                "med_name": med_name,
+                "remind_time": snooze_time,
+            }
+            updated_schedules = self.schedules + [snooze_item]
+            if not self._save_schedules(updated_schedules):
+                return
+            self.schedules = updated_schedules
             
             messagebox.showinfo("Snooze", f"เลื่อนการเตือนยา {med_name} ไปอีก 10 นาที ({snooze_time} น.)")
             popup.destroy()
